@@ -5,8 +5,10 @@ import AvatarImage from '../../components/AvatarImage.jsx';
 import ErrorState from '../../components/ui/ErrorState.jsx';
 import FormCard from '../../components/ui/FormCard.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
+import SelectInput from '../../components/ui/SelectInput.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { fileToBase64Payload, IMAGE_ACCEPT, IMAGE_MAX_BYTES, validateImageFile } from '../../utils/fileUpload.js';
+import { getKelasList } from '../kelas/kelasService.js';
 import { createSiswa, deleteSiswaPhoto, getSiswaList, updateSiswa, uploadSiswaPhoto } from './siswaService.js';
 
 const emptyForm = {
@@ -18,6 +20,9 @@ const emptyForm = {
   tempatLahir: '',
   tanggalLahir: '',
   kelasId: '',
+  namaAyah: '',
+  namaIbu: '',
+  namaWali: '',
   namaOrangTua: '',
   noHpOrangTua: '',
   alamat: '',
@@ -26,7 +31,7 @@ const emptyForm = {
   status: 'aktif'
 };
 
-export default function SiswaFormPage({ modalMode, initialStudent, onCancel, onSaved }) {
+export default function SiswaFormPage({ modalMode, initialStudent, kelasRows: initialKelasRows, onCancel, onSaved }) {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
@@ -40,9 +45,12 @@ export default function SiswaFormPage({ modalMode, initialStudent, onCancel, onS
   }));
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(initialData?.fotoUrl || '');
+  const [kelasRows, setKelasRows] = useState(initialKelasRows || []);
   const [photoError, setPhotoError] = useState('');
   const [error, setError] = useState('');
+  const [kelasError, setKelasError] = useState('');
   const [isLoading, setIsLoading] = useState(mode === 'edit' && !location.state?.student);
+  const [isLoadingKelas, setIsLoadingKelas] = useState(!(initialKelasRows || []).length);
   const [isSaving, setIsSaving] = useState(false);
 
   const title = useMemo(() => (mode === 'edit' ? 'Edit Siswa' : 'Tambah Siswa'), [mode]);
@@ -69,6 +77,26 @@ export default function SiswaFormPage({ modalMode, initialStudent, onCancel, onS
       .catch((err) => setError(err.message || 'Gagal memuat data siswa.'))
       .finally(() => setIsLoading(false));
   }, [initialStudent, location.state, mode, params.siswaId]);
+
+  useEffect(() => {
+    if (initialKelasRows?.length) {
+      setKelasRows(initialKelasRows);
+      setIsLoadingKelas(false);
+      return;
+    }
+
+    setIsLoadingKelas(true);
+    getKelasList({ status: 'aktif', page: 1, limit: 200 })
+      .then((data) => {
+        setKelasRows(data.items || []);
+        setKelasError('');
+      })
+      .catch((err) => {
+        setKelasRows([]);
+        setKelasError(err.message || 'Gagal memuat data kelas.');
+      })
+      .finally(() => setIsLoadingKelas(false));
+  }, [initialKelasRows]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -101,7 +129,7 @@ export default function SiswaFormPage({ modalMode, initialStudent, onCancel, onS
   function validate() {
     if (!form.nis.trim()) return 'NIS wajib diisi.';
     if (!form.namaLengkap.trim()) return 'Nama lengkap wajib diisi.';
-    if (!form.kelasId.trim()) return 'Kelas ID wajib diisi.';
+    if (!form.kelasId.trim()) return 'Kelas wajib dipilih.';
     if (!['L', 'P'].includes(form.jenisKelamin)) return 'Jenis kelamin harus L atau P.';
     return '';
   }
@@ -159,68 +187,102 @@ export default function SiswaFormPage({ modalMode, initialStudent, onCancel, onS
       {error ? <ErrorState description={error} /> : null}
 
       <form className="space-y-5" onSubmit={handleSubmit}>
-        <FormCard title="Foto Siswa" description="Gunakan JPG, PNG, atau WEBP. Maksimal 2 MB.">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <AvatarImage className="h-24 w-24 rounded-2xl text-2xl" name={form.namaLengkap} src={photoPreview} />
-              <div>
-                <p className="text-sm font-semibold text-slate-950">{photoFile?.name || 'Preview foto siswa'}</p>
-                <p className="mt-1 text-xs leading-5 text-slate-500">
-                  Batas ukuran {IMAGE_MAX_BYTES / 1024 / 1024} MB. Base64 hanya dipakai saat upload dan tidak disimpan di Sheets.
-                </p>
-                {photoError ? <p className="mt-2 text-xs font-semibold text-rose-600">{photoError}</p> : null}
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <label className="button button-secondary !inline-flex gap-2">
-                <ImageUp className="h-4 w-4" />
-                Pilih Foto
-                <input accept={IMAGE_ACCEPT} className="sr-only" type="file" onChange={handlePhotoChange} />
-              </label>
-              {mode === 'edit' && form.fotoUrl ? (
-                <button className="button border-rose-200 bg-white text-rose-700 hover:bg-rose-50" type="button" onClick={handleDeletePhoto}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Hapus Foto
-                </button>
-              ) : null}
-            </div>
-          </div>
-        </FormCard>
+        {kelasError ? <ErrorState description={kelasError} /> : null}
 
-        <FormCard title="Data Utama" description="Identitas dasar siswa dan kelas aktif.">
+        <FormCard title="Identitas Siswa" description="Data dasar siswa untuk pencarian dan laporan.">
           <div className="grid gap-4 md:grid-cols-2">
             {mode === 'edit' ? <Field label="Siswa ID" name="siswaId" value={form.siswaId} onChange={handleChange} required /> : null}
+            <Field className="md:col-span-2" label="Nama Lengkap" name="namaLengkap" value={form.namaLengkap} onChange={handleChange} required />
             <Field label="NIS" name="nis" value={form.nis} onChange={handleChange} required />
             <Field label="NISN" name="nisn" value={form.nisn} onChange={handleChange} />
-            <Field className="md:col-span-2" label="Nama Lengkap" name="namaLengkap" value={form.namaLengkap} onChange={handleChange} required />
-            <SelectField label="Jenis Kelamin" name="jenisKelamin" value={form.jenisKelamin} onChange={handleChange}>
-              <option value="L">Laki-laki</option>
-              <option value="P">Perempuan</option>
-            </SelectField>
-            <Field label="Kelas ID" name="kelasId" value={form.kelasId} onChange={handleChange} placeholder="KLS001" required />
+            <SelectInput
+              label="Jenis Kelamin"
+              name="jenisKelamin"
+              value={form.jenisKelamin}
+              onChange={handleChange}
+              required
+              options={[
+                { value: 'L', label: 'Laki-laki' },
+                { value: 'P', label: 'Perempuan' }
+              ]}
+            />
             <Field label="Tempat Lahir" name="tempatLahir" value={form.tempatLahir} onChange={handleChange} />
             <Field label="Tanggal Lahir" name="tanggalLahir" type="date" value={form.tanggalLahir} onChange={handleChange} />
           </div>
         </FormCard>
 
-        <FormCard title="Data Orang Tua" description="Kontak dan alamat untuk kebutuhan wali kelas.">
+        <FormCard title="Akademik" description="Pilih kelas dari data kelas aktif.">
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Nama Orang Tua" name="namaOrangTua" value={form.namaOrangTua} onChange={handleChange} />
-            <Field label="No HP Orang Tua" name="noHpOrangTua" value={form.noHpOrangTua} onChange={handleChange} />
-            <label className="grid gap-1.5 text-sm font-semibold text-slate-700 md:col-span-2">
-              Alamat
-              <textarea className="min-h-24 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" name="alamat" value={form.alamat} onChange={handleChange} />
-            </label>
-            <SelectField label="Status" name="status" value={form.status} onChange={handleChange}>
-              <option value="aktif">Aktif</option>
-              <option value="lulus">Lulus</option>
-              <option value="pindah">Pindah</option>
-              <option value="nonaktif">Nonaktif</option>
-            </SelectField>
+            <SelectInput
+              label="Kelas"
+              name="kelasId"
+              value={form.kelasId}
+              onChange={handleChange}
+              required
+              disabled={isLoadingKelas}
+              placeholder={isLoadingKelas ? 'Memuat kelas...' : 'Pilih kelas'}
+              helperText="Value yang disimpan adalah kelasId."
+              options={kelasRows.map((kelas) => ({ value: kelas.kelasId, label: kelas.namaKelas || kelas.kelasId }))}
+            />
+            <SelectInput
+              label="Status Siswa"
+              name="status"
+              value={form.status}
+              onChange={handleChange}
+              required
+              options={[
+                { value: 'aktif', label: 'Aktif' },
+                { value: 'lulus', label: 'Lulus' },
+                { value: 'pindah', label: 'Pindah' },
+                { value: 'nonaktif', label: 'Nonaktif' }
+              ]}
+            />
           </div>
         </FormCard>
 
-        <div className="flex justify-end gap-2">
+        <FormCard title="Orang Tua/Wali" description="Kontak keluarga untuk kebutuhan administrasi dan wali kelas.">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Nama Ayah" name="namaAyah" value={form.namaAyah} onChange={handleChange} />
+            <Field label="Nama Ibu" name="namaIbu" value={form.namaIbu} onChange={handleChange} />
+            <Field label="Nama Wali" name="namaWali" value={form.namaWali} onChange={handleChange} />
+            <Field label="Nama Orang Tua/Wali Utama" name="namaOrangTua" value={form.namaOrangTua} onChange={handleChange} />
+            <Field label="Nomor HP Wali" name="noHpOrangTua" value={form.noHpOrangTua} onChange={handleChange} />
+          </div>
+        </FormCard>
+
+        <FormCard title="Alamat dan Foto" description="Foto disimpan ke Google Drive, bukan ke Sheet.">
+          <div className="grid gap-5 lg:grid-cols-[1fr_260px]">
+            <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
+              Alamat
+              <textarea className="min-h-28 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" name="alamat" value={form.alamat} onChange={handleChange} />
+            </label>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center gap-4">
+                <AvatarImage className="h-20 w-20 rounded-2xl text-xl" name={form.namaLengkap} src={photoPreview} />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-950">{photoFile?.name || 'Preview foto siswa'}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">Maks. {IMAGE_MAX_BYTES / 1024 / 1024} MB.</p>
+                </div>
+              </div>
+              {photoError ? <p className="mt-3 text-xs font-semibold text-rose-600">{photoError}</p> : null}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <label className="button button-secondary !inline-flex gap-2">
+                  <ImageUp className="h-4 w-4" />
+                  Pilih Foto
+                  <input accept={IMAGE_ACCEPT} className="sr-only" type="file" onChange={handlePhotoChange} />
+                </label>
+                {mode === 'edit' && form.fotoUrl ? (
+                  <button className="button border-rose-200 bg-white text-rose-700 hover:bg-rose-50" type="button" onClick={handleDeletePhoto}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Hapus
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </FormCard>
+
+        <div className="sticky bottom-0 z-10 -mx-4 flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-4 sm:-mx-5 sm:px-5">
           {onCancel ? <button className="button button-secondary" type="button" onClick={onCancel}>Batal</button> : <Link className="button button-secondary" to="/siswa">Batal</Link>}
           <button className="button button-primary gap-2" type="submit" disabled={isSaving}>
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -237,17 +299,6 @@ function Field({ label, className = '', ...props }) {
     <label className={`grid gap-1.5 text-sm font-semibold text-slate-700 ${className}`}>
       {label}
       <input className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" {...props} />
-    </label>
-  );
-}
-
-function SelectField({ label, children, ...props }) {
-  return (
-    <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
-      {label}
-      <select className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" {...props}>
-        {children}
-      </select>
     </label>
   );
 }

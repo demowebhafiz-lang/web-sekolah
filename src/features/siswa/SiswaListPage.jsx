@@ -8,10 +8,12 @@ import ErrorState from '../../components/ui/ErrorState.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
 import FormModal from '../../components/ui/FormModal.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
+import SelectInput from '../../components/ui/SelectInput.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { getStoredUser } from '../auth/authService.js';
 import { ADMIN_ROLES, canAccess } from '../auth/roles.js';
+import { getKelasList } from '../kelas/kelasService.js';
 import SiswaFormPage from './SiswaFormPage.jsx';
 import { deleteSiswa, getSiswaList } from './siswaService.js';
 
@@ -28,8 +30,11 @@ export default function SiswaListPage() {
   const { showToast } = useToast();
   const [filters, setFilters] = useState(initialFilters);
   const [students, setStudents] = useState([]);
+  const [kelasRows, setKelasRows] = useState([]);
   const [error, setError] = useState('');
+  const [kelasError, setKelasError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingKelas, setIsLoadingKelas] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [formModal, setFormModal] = useState(null);
 
@@ -38,6 +43,7 @@ export default function SiswaListPage() {
 
   useEffect(() => {
     loadStudents(initialFilters);
+    loadKelas();
   }, []);
 
   useEffect(() => {
@@ -70,9 +76,29 @@ export default function SiswaListPage() {
     }
   }
 
+  async function loadKelas() {
+    setIsLoadingKelas(true);
+    setKelasError('');
+
+    try {
+      const data = await getKelasList({ status: 'aktif', page: 1, limit: 200 });
+      setKelasRows(data.items || []);
+    } catch (err) {
+      setKelasError(err.message || 'Gagal memuat data kelas.');
+      setKelasRows([]);
+    } finally {
+      setIsLoadingKelas(false);
+    }
+  }
+
   function handleFilterChange(event) {
     const { name, value } = event.target;
-    setFilters((current) => ({ ...current, [name]: value }));
+    const nextFilters = { ...filters, [name]: value };
+    setFilters(nextFilters);
+
+    if (name !== 'keyword') {
+      loadStudents(nextFilters);
+    }
   }
 
   function handleSubmit(event) {
@@ -119,7 +145,7 @@ export default function SiswaListPage() {
       )
     },
     { key: 'jenisKelamin', header: 'JK', render: (student) => student.jenisKelamin || '-' },
-    { key: 'kelasId', header: 'Kelas', render: (student) => student.kelasId || '-' },
+    { key: 'kelasId', header: 'Kelas', render: (student) => getKelasName(kelasRows, student.kelasId) },
     { key: 'namaOrangTua', header: 'Orang Tua', render: (student) => student.namaOrangTua || '-' },
     { key: 'status', header: 'Status', render: (student) => <StatusBadge status={student.status || 'aktif'} /> },
     {
@@ -160,27 +186,42 @@ export default function SiswaListPage() {
             <input className="h-10 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" name="keyword" value={filters.keyword} onChange={handleFilterChange} placeholder="Ahmad / 2026001" />
           </div>
         </Field>
-        <Field label="Kelas">
-          <input className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" name="kelasId" value={filters.kelasId} onChange={handleFilterChange} placeholder="KLS001" />
-        </Field>
-        <Field label="Status">
-          <select className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" name="status" value={filters.status} onChange={handleFilterChange}>
-            <option value="">Semua</option>
-            <option value="aktif">Aktif</option>
-            <option value="lulus">Lulus</option>
-            <option value="pindah">Pindah</option>
-            <option value="nonaktif">Nonaktif</option>
-          </select>
-        </Field>
-        <Field label="Jenis Kelamin">
-          <select className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" name="jenisKelamin" value={filters.jenisKelamin} onChange={handleFilterChange}>
-            <option value="">Semua</option>
-            <option value="L">Laki-laki</option>
-            <option value="P">Perempuan</option>
-          </select>
-        </Field>
+        <SelectInput
+          label="Kelas"
+          name="kelasId"
+          value={filters.kelasId}
+          onChange={handleFilterChange}
+          disabled={isLoadingKelas}
+          placeholder={isLoadingKelas ? 'Memuat kelas...' : 'Semua Kelas'}
+          options={kelasRows.map((kelas) => ({ value: kelas.kelasId, label: kelas.namaKelas || kelas.kelasId }))}
+        />
+        <SelectInput
+          label="Status"
+          name="status"
+          value={filters.status}
+          onChange={handleFilterChange}
+          options={[
+            { value: '', label: 'Semua' },
+            { value: 'aktif', label: 'Aktif' },
+            { value: 'lulus', label: 'Lulus' },
+            { value: 'pindah', label: 'Pindah' },
+            { value: 'nonaktif', label: 'Nonaktif' }
+          ]}
+        />
+        <SelectInput
+          label="Jenis Kelamin"
+          name="jenisKelamin"
+          value={filters.jenisKelamin}
+          onChange={handleFilterChange}
+          options={[
+            { value: '', label: 'Semua' },
+            { value: 'L', label: 'Laki-laki' },
+            { value: 'P', label: 'Perempuan' }
+          ]}
+        />
       </FilterBar>
 
+      {kelasError ? <ErrorState description={kelasError} onRetry={loadKelas} /> : null}
       {error ? <ErrorState description={error} onRetry={() => loadStudents(filters)} /> : null}
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -220,12 +261,17 @@ export default function SiswaListPage() {
           key={`${formModal?.mode || 'closed'}-${formModal?.item?.siswaId || 'new'}`}
           modalMode={formModal?.mode}
           initialStudent={formModal?.item}
+          kelasRows={kelasRows}
           onCancel={() => setFormModal(null)}
           onSaved={handleSaved}
         />
       </FormModal>
     </section>
   );
+}
+
+function getKelasName(kelasRows, kelasId) {
+  return kelasRows.find((kelas) => String(kelas.kelasId) === String(kelasId))?.namaKelas || kelasId || '-';
 }
 
 function Field({ label, children }) {

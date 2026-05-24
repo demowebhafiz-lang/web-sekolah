@@ -1,0 +1,349 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --primary: 160 84% 32%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 346 77% 49%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 160 84% 32%;
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply m-0 min-w-80 bg-slate-100 text-slate-950 antialiased;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  a {
+    @apply text-inherit no-underline;
+  }
+}
+
+@layer components {
+  .button {
+    @apply inline-flex min-h-10 cursor-pointer items-center justify-center rounded-lg border border-transparent px-4 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70;
+  }
+
+  .button-primary {
+    @apply bg-emerald-600 text-white shadow-sm hover:bg-emerald-700;
+  }
+
+  .button-secondary {
+    @apply border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50;
+  }
+
+  .button-inline {
+    @apply w-auto;
+  }
+
+  .page-stack {
+    @apply space-y-6;
+  }
+
+  .page-heading {
+    @apply space-y-2;
+  }
+
+  .page-heading-row {
+    @apply flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between;
+  }
+
+  .page-heading h2 {
+    @apply text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl;
+  }
+
+  .page-heading p {
+    @apply max-w-2xl text-sm leading-6 text-slate-500;
+  }
+
+  .eyebrow {
+    @apply text-sm font-semibold uppercase tracking-wide text-emerald-700;
+  }
+
+  .panel,
+  .login-panel,
+  .stat-card {
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+  }
+
+  .panel {
+    @apply p-5;
+  }
+
+  .panel-header {
+    @apply mb-4 flex items-center justify-between gap-3;
+  }
+
+  .panel-header h3 {
+    @apply m-0 text-base font-semibold text-slate-950;
+  }
+
+  .panel-header span {
+    @apply text-sm text-slate-500;
+  }
+
+  .stats-grid {
+    @apply grid gap-4 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .content-grid {
+    @apply grid gap-4 xl:grid-cols-2;
+  }
+
+  .empty-visual,
+  .table-empty {
+    @apply grid min-h-36 place-items-center rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500;
+  }
+
+  .filter-bar,
+  .nilai-filter,
+  .hafalan-filter,
+  .compact-filter {
+    @apply grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm;
+  }
+
+  .filter-bar {
+    @apply md:grid-cols-[1.4fr_1fr_1fr_auto] md:items-end;
+  }
+
+  .nilai-filter {
+    @apply lg:grid-cols-[repeat(5,minmax(0,1fr))_auto] lg:items-end;
+  }
+
+  .hafalan-filter {
+    @apply lg:grid-cols-[repeat(4,minmax(0,1fr))_auto] lg:items-end;
+  }
+
+  .compact-filter {
+    @apply md:grid-cols-[minmax(220px,360px)_auto] md:items-end;
+  }
+
+  .filter-bar label,
+  .nilai-filter label,
+  .hafalan-filter label,
+  .compact-filter label,
+  .data-form label,
+  .login-form label {
+    @apply grid gap-1.5 text-sm font-semibold text-slate-700;
+  }
+
+  .filter-bar input,
+  .filter-bar select,
+  .nilai-filter input,
+  .nilai-filter select,
+  .hafalan-filter input,
+  .hafalan-filter select,
+  .compact-filter input,
+  .nilai-table input,
+  .data-form input,
+  .data-form select,
+  .data-form textarea,
+  .login-form input {
+    @apply min-h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100;
+  }
+
+  .data-form {
+    @apply grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2;
+  }
+
+  .data-form textarea {
+    @apply min-h-24 resize-y py-2;
+  }
+
+  .span-2 {
+    @apply md:col-span-2;
+  }
+
+  .form-actions {
+    @apply flex flex-wrap justify-end gap-2;
+  }
+
+  .notice {
+    @apply rounded-xl border px-4 py-3 text-sm font-medium;
+  }
+
+  .notice.success {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-700;
+  }
+
+  .notice.error,
+  .form-error {
+    @apply rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700;
+  }
+
+  .table-wrap {
+    @apply overflow-x-auto rounded-xl border border-slate-200 bg-white;
+  }
+
+  .data-table {
+    @apply w-full min-w-[760px] border-collapse text-left text-sm;
+  }
+
+  .data-table th {
+    @apply bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500;
+  }
+
+  .data-table td {
+    @apply border-t border-slate-100 px-4 py-3 text-slate-700;
+  }
+
+  .data-table tr {
+    @apply transition hover:bg-slate-50;
+  }
+
+  .table-actions {
+    @apply flex whitespace-nowrap gap-3;
+  }
+
+  .text-button {
+    @apply border-0 bg-transparent p-0 text-sm font-semibold text-emerald-700 hover:text-emerald-800;
+  }
+
+  .text-button.danger {
+    @apply text-rose-700 hover:text-rose-800;
+  }
+
+  .status-badge {
+    @apply inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold capitalize text-slate-700 ring-1 ring-slate-200;
+  }
+
+  .status-aktif,
+  .status-lancar,
+  .status-selesai {
+    @apply bg-emerald-50 text-emerald-700 ring-emerald-200;
+  }
+
+  .status-nonaktif {
+    @apply bg-slate-100 text-slate-600 ring-slate-200;
+  }
+
+  .status-perlu_perbaikan {
+    @apply bg-rose-50 text-rose-700 ring-rose-200;
+  }
+
+  .status-murajaah,
+  .status-baru {
+    @apply bg-amber-50 text-amber-700 ring-amber-200;
+  }
+
+  .login-page {
+    @apply grid min-h-screen place-items-center bg-slate-100 p-6;
+  }
+
+  .login-panel {
+    @apply w-full max-w-md p-8;
+  }
+
+  .login-brand {
+    @apply mb-6 flex items-center gap-3;
+  }
+
+  .brand-mark {
+    @apply grid h-11 w-11 place-items-center rounded-xl bg-emerald-500 font-black text-slate-950;
+  }
+
+  .brand-mark.large {
+    @apply h-12 w-12;
+  }
+
+  .login-brand p {
+    @apply m-0 font-semibold text-slate-950;
+  }
+
+  .login-panel h1 {
+    @apply text-2xl font-semibold tracking-tight text-slate-950;
+  }
+
+  .login-form {
+    @apply mt-6 grid gap-4;
+  }
+
+  .login-form .button-primary {
+    @apply w-full;
+  }
+
+  .help-text {
+    @apply mt-4 text-sm text-slate-500;
+  }
+
+  .report-table {
+    @apply w-full min-w-[720px] border-collapse text-left text-sm;
+  }
+
+  .report-table th {
+    @apply border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-600;
+  }
+
+  .report-table td {
+    @apply border border-slate-200 px-3 py-2 text-slate-700;
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+
+  aside,
+  .app-topbar,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  .report-header {
+    display: flex !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  .print-area {
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  .report-table {
+    min-width: 0 !important;
+    font-size: 11px !important;
+  }
+
+  .report-table th,
+  .report-table td {
+    border-color: #334155 !important;
+    padding: 6px 8px !important;
+  }
+}

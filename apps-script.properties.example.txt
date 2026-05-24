@@ -1,0 +1,6 @@
+# Isi di Google Apps Script > Project Settings > Script Properties
+# Jangan commit token asli.
+# Backend terikat langsung ke Google Sheets aktif, jadi tidak perlu id spreadsheet.
+
+APP_API_TOKEN=change_me_with_same_token_as_vercel
+SESSION_EXPIRED_HOURS=12

@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import ErrorState from '../../components/ui/ErrorState.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
+import FormModal from '../../components/ui/FormModal.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
+import GuruFormPage from './GuruFormPage.jsx';
 import { deleteGuru, getGuruList } from './guruService.js';
 
 const initialFilters = {
@@ -17,7 +19,6 @@ const initialFilters = {
 };
 
 export default function GuruListPage() {
-  const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
   const [filters, setFilters] = useState(initialFilters);
@@ -25,6 +26,7 @@ export default function GuruListPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [formModal, setFormModal] = useState(null);
   const total = useMemo(() => rows.length, [rows]);
 
   useEffect(() => {
@@ -80,6 +82,12 @@ export default function GuruListPage() {
     }
   }
 
+  async function handleSaved(message) {
+    setFormModal(null);
+    showToast({ title: 'Data guru', description: message, variant: 'success' });
+    await loadRows(filters);
+  }
+
   const columns = [
     { key: 'namaGuru', header: 'Nama Guru', render: (row) => <strong className="text-slate-950">{row.namaGuru || '-'}</strong> },
     { key: 'email', header: 'Email', render: (row) => row.email || '-' },
@@ -91,7 +99,7 @@ export default function GuruListPage() {
       header: 'Aksi',
       render: (row) => (
         <div className="flex gap-2">
-          <button className="text-button" type="button" onClick={() => navigate(`/guru/${row.guruId}/edit`, { state: { guru: row } })}>Edit</button>
+          <button className="text-button" type="button" onClick={() => setFormModal({ mode: 'edit', item: row })}>Edit</button>
           <button className="text-button danger" type="button" onClick={() => setDeleteTarget(row)}>Nonaktifkan</button>
         </div>
       )
@@ -104,7 +112,7 @@ export default function GuruListPage() {
         eyebrow="Data Master"
         title="Data Guru"
         description="Kelola guru, akun terkait, role pengajar, dan status aktif."
-        actions={<Link className="button button-primary gap-2" to="/guru/tambah"><Plus className="h-4 w-4" />Tambah Guru</Link>}
+        actions={<button className="button button-primary gap-2" type="button" onClick={() => setFormModal({ mode: 'create' })}><Plus className="h-4 w-4" />Tambah Guru</button>}
       />
 
       <FilterBar onSubmit={(event) => { event.preventDefault(); loadRows(filters); }}>
@@ -134,6 +142,21 @@ export default function GuruListPage() {
       </section>
 
       <ConfirmDialog open={Boolean(deleteTarget)} title="Nonaktifkan guru?" description={`Guru ${deleteTarget?.namaGuru || ''} akan diubah menjadi nonaktif.`} confirmLabel="Nonaktifkan" onCancel={() => setDeleteTarget(null)} onConfirm={handleDelete} />
+
+      <FormModal
+        open={Boolean(formModal)}
+        title={formModal?.mode === 'edit' ? 'Edit Guru' : 'Tambah Guru'}
+        description="Isi data guru tanpa meninggalkan daftar."
+        onClose={() => setFormModal(null)}
+      >
+        <GuruFormPage
+          key={`${formModal?.mode || 'closed'}-${formModal?.item?.guruId || 'new'}`}
+          modalMode={formModal?.mode}
+          initialGuru={formModal?.item}
+          onCancel={() => setFormModal(null)}
+          onSaved={handleSaved}
+        />
+      </FormModal>
     </section>
   );
 }

@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Search } from 'lucide-react';
 import AvatarImage from '../../components/AvatarImage.jsx';
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import ErrorState from '../../components/ui/ErrorState.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
+import FormModal from '../../components/ui/FormModal.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { getStoredUser } from '../auth/authService.js';
 import { ADMIN_ROLES, canAccess } from '../auth/roles.js';
+import SiswaFormPage from './SiswaFormPage.jsx';
 import { deleteSiswa, getSiswaList } from './siswaService.js';
 
 const initialFilters = {
@@ -29,6 +31,7 @@ export default function SiswaListPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [formModal, setFormModal] = useState(null);
 
   const canManage = canAccess(getStoredUser()?.role, ADMIN_ROLES);
   const total = useMemo(() => students.length, [students]);
@@ -90,6 +93,12 @@ export default function SiswaListPage() {
     }
   }
 
+  async function handleSaved(message) {
+    setFormModal(null);
+    showToast({ title: 'Data siswa', description: message, variant: 'success' });
+    await loadStudents(filters);
+  }
+
   const columns = [
     {
       key: 'foto',
@@ -121,7 +130,7 @@ export default function SiswaListPage() {
           <button className="text-button" type="button" onClick={() => navigate(`/siswa/${student.siswaId}`, { state: { student } })}>Detail</button>
           {canManage ? (
             <>
-              <button className="text-button" type="button" onClick={() => navigate(`/siswa/${student.siswaId}/edit`, { state: { student } })}>Edit</button>
+              <button className="text-button" type="button" onClick={() => setFormModal({ mode: 'edit', item: student })}>Edit</button>
               <button className="text-button danger" type="button" onClick={() => setDeleteTarget(student)}>Nonaktifkan</button>
             </>
           ) : null}
@@ -137,10 +146,10 @@ export default function SiswaListPage() {
         title="Data Siswa"
         description="Kelola data siswa, foto profil, status aktif, dan informasi orang tua."
         actions={canManage ? (
-          <Link className="button button-primary gap-2" to="/siswa/tambah">
+          <button className="button button-primary gap-2" type="button" onClick={() => setFormModal({ mode: 'create' })}>
             <Plus className="h-4 w-4" />
             Tambah Siswa
-          </Link>
+          </button>
         ) : null}
       />
 
@@ -199,6 +208,22 @@ export default function SiswaListPage() {
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
       />
+
+      <FormModal
+        open={Boolean(formModal)}
+        title={formModal?.mode === 'edit' ? 'Edit Siswa' : 'Tambah Siswa'}
+        description="Isi data siswa tanpa meninggalkan daftar."
+        onClose={() => setFormModal(null)}
+        size="xl"
+      >
+        <SiswaFormPage
+          key={`${formModal?.mode || 'closed'}-${formModal?.item?.siswaId || 'new'}`}
+          modalMode={formModal?.mode}
+          initialStudent={formModal?.item}
+          onCancel={() => setFormModal(null)}
+          onSaved={handleSaved}
+        />
+      </FormModal>
     </section>
   );
 }

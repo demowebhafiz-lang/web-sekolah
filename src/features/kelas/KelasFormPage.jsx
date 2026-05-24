@@ -16,19 +16,24 @@ const emptyForm = {
   status: 'aktif'
 };
 
-export default function KelasFormPage() {
+export default function KelasFormPage({ modalMode, initialKelas, onCancel, onSaved }) {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
   const { showToast } = useToast();
-  const mode = params.kelasId ? 'edit' : 'create';
-  const [form, setForm] = useState(() => ({ ...emptyForm, ...location.state?.kelas, kelasId: location.state?.kelas?.kelasId || params.kelasId || '' }));
+  const mode = modalMode || (params.kelasId ? 'edit' : 'create');
+  const initialData = initialKelas || location.state?.kelas;
+  const [form, setForm] = useState(() => ({ ...emptyForm, ...initialData, kelasId: initialData?.kelasId || params.kelasId || '' }));
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(mode === 'edit' && !location.state?.kelas);
   const [isSaving, setIsSaving] = useState(false);
   const title = useMemo(() => (mode === 'edit' ? 'Edit Kelas' : 'Tambah Kelas'), [mode]);
 
   useEffect(() => {
+    if (initialKelas) {
+      setForm({ ...emptyForm, ...initialKelas });
+      return;
+    }
     if (mode !== 'edit' || location.state?.kelas) return;
     getKelasList({ page: 1, limit: 200, status: '' })
       .then((data) => {
@@ -38,7 +43,7 @@ export default function KelasFormPage() {
       })
       .catch((err) => setError(err.message || 'Gagal memuat data kelas.'))
       .finally(() => setIsLoading(false));
-  }, [location.state, mode, params.kelasId]);
+  }, [initialKelas, location.state, mode, params.kelasId]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -66,7 +71,9 @@ export default function KelasFormPage() {
     try {
       if (mode === 'edit') await updateKelas(form);
       else await createKelas(form);
-      navigate('/kelas', { replace: true, state: { message: mode === 'edit' ? 'Kelas berhasil diperbarui.' : 'Kelas berhasil ditambahkan.' } });
+      const message = mode === 'edit' ? 'Kelas berhasil diperbarui.' : 'Kelas berhasil ditambahkan.';
+      if (onSaved) onSaved(message);
+      else navigate('/kelas', { replace: true, state: { message } });
     } catch (err) {
       const message = err.message || 'Gagal menyimpan kelas.';
       setError(message);
@@ -80,7 +87,7 @@ export default function KelasFormPage() {
 
   return (
     <section className="space-y-6">
-      <PageHeader eyebrow="Data Master" title={title} description="Isi struktur kelas sesuai Sheet Kelas." actions={<Link className="button button-secondary" to="/kelas">Kembali</Link>} />
+      {!onSaved ? <PageHeader eyebrow="Data Master" title={title} description="Isi struktur kelas sesuai Sheet Kelas." actions={<Link className="button button-secondary" to="/kelas">Kembali</Link>} /> : null}
       {error ? <ErrorState description={error} /> : null}
       <form className="space-y-5" onSubmit={handleSubmit}>
         <FormCard title="Informasi Kelas" description="Kelas terhubung ke siswa, nilai, dan hafalan.">
@@ -96,7 +103,7 @@ export default function KelasFormPage() {
             </SelectField>
           </div>
         </FormCard>
-        <Actions isSaving={isSaving} backTo="/kelas" />
+        <Actions isSaving={isSaving} backTo="/kelas" onCancel={onCancel} />
       </form>
     </section>
   );
@@ -110,10 +117,10 @@ function SelectField({ label, children, ...props }) {
   return <label className="grid gap-1.5 text-sm font-semibold text-slate-700">{label}<select className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" {...props}>{children}</select></label>;
 }
 
-function Actions({ isSaving, backTo }) {
+function Actions({ isSaving, backTo, onCancel }) {
   return (
     <div className="flex justify-end gap-2">
-      <Link className="button button-secondary" to={backTo}>Batal</Link>
+      {onCancel ? <button className="button button-secondary" type="button" onClick={onCancel}>Batal</button> : <Link className="button button-secondary" to={backTo}>Batal</Link>}
       <button className="button button-primary gap-2" type="submit" disabled={isSaving}>{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{isSaving ? 'Menyimpan...' : 'Simpan'}</button>
     </div>
   );

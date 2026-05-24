@@ -26,19 +26,20 @@ const emptyForm = {
   status: 'aktif'
 };
 
-export default function SiswaFormPage() {
+export default function SiswaFormPage({ modalMode, initialStudent, onCancel, onSaved }) {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
   const { showToast } = useToast();
-  const mode = params.siswaId ? 'edit' : 'create';
+  const mode = modalMode || (params.siswaId ? 'edit' : 'create');
+  const initialData = initialStudent || location.state?.student;
   const [form, setForm] = useState(() => ({
     ...emptyForm,
-    ...location.state?.student,
-    siswaId: location.state?.student?.siswaId || params.siswaId || ''
+    ...initialData,
+    siswaId: initialData?.siswaId || params.siswaId || ''
   }));
   const [photoFile, setPhotoFile] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(location.state?.student?.fotoUrl || '');
+  const [photoPreview, setPhotoPreview] = useState(initialData?.fotoUrl || '');
   const [photoError, setPhotoError] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(mode === 'edit' && !location.state?.student);
@@ -47,6 +48,12 @@ export default function SiswaFormPage() {
   const title = useMemo(() => (mode === 'edit' ? 'Edit Siswa' : 'Tambah Siswa'), [mode]);
 
   useEffect(() => {
+    if (initialStudent) {
+      setForm({ ...emptyForm, ...initialStudent });
+      setPhotoPreview(initialStudent.fotoUrl || '');
+      setPhotoFile(null);
+      return;
+    }
     if (mode !== 'edit' || location.state?.student) return;
 
     getSiswaList({ page: 1, limit: 200, status: '' })
@@ -61,7 +68,7 @@ export default function SiswaFormPage() {
       })
       .catch((err) => setError(err.message || 'Gagal memuat data siswa.'))
       .finally(() => setIsLoading(false));
-  }, [location.state, mode, params.siswaId]);
+  }, [initialStudent, location.state, mode, params.siswaId]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -121,9 +128,11 @@ export default function SiswaFormPage() {
         await uploadSiswaPhoto({ ...photoPayload, siswaId });
       }
 
-      navigate('/siswa', {
+      const message = mode === 'edit' ? 'Siswa berhasil diperbarui.' : 'Siswa berhasil ditambahkan.';
+      if (onSaved) onSaved(message);
+      else navigate('/siswa', {
         replace: true,
-        state: { message: mode === 'edit' ? 'Siswa berhasil diperbarui.' : 'Siswa berhasil ditambahkan.' }
+        state: { message }
       });
     } catch (err) {
       const message = err.message || 'Gagal menyimpan siswa.';
@@ -140,12 +149,12 @@ export default function SiswaFormPage() {
 
   return (
     <section className="space-y-6">
-      <PageHeader
+      {!onSaved ? <PageHeader
         eyebrow="Data Master"
         title={title}
         description="Isi data siswa sesuai struktur Sheet Siswa. Foto dikirim ke Google Drive lewat Apps Script."
         actions={<Link className="button button-secondary" to="/siswa">Kembali</Link>}
-      />
+      /> : null}
 
       {error ? <ErrorState description={error} /> : null}
 
@@ -212,7 +221,7 @@ export default function SiswaFormPage() {
         </FormCard>
 
         <div className="flex justify-end gap-2">
-          <Link className="button button-secondary" to="/siswa">Batal</Link>
+          {onCancel ? <button className="button button-secondary" type="button" onClick={onCancel}>Batal</button> : <Link className="button button-secondary" to="/siswa">Batal</Link>}
           <button className="button button-primary gap-2" type="submit" disabled={isSaving}>
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {isSaving ? 'Menyimpan...' : 'Simpan'}

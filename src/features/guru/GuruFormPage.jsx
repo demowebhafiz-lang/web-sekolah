@@ -17,19 +17,24 @@ const emptyForm = {
   status: 'aktif'
 };
 
-export default function GuruFormPage() {
+export default function GuruFormPage({ modalMode, initialGuru, onCancel, onSaved }) {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
   const { showToast } = useToast();
-  const mode = params.guruId ? 'edit' : 'create';
-  const [form, setForm] = useState(() => ({ ...emptyForm, ...location.state?.guru, guruId: location.state?.guru?.guruId || params.guruId || '' }));
+  const mode = modalMode || (params.guruId ? 'edit' : 'create');
+  const initialData = initialGuru || location.state?.guru;
+  const [form, setForm] = useState(() => ({ ...emptyForm, ...initialData, guruId: initialData?.guruId || params.guruId || '' }));
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(mode === 'edit' && !location.state?.guru);
   const [isSaving, setIsSaving] = useState(false);
   const title = useMemo(() => (mode === 'edit' ? 'Edit Guru' : 'Tambah Guru'), [mode]);
 
   useEffect(() => {
+    if (initialGuru) {
+      setForm({ ...emptyForm, ...initialGuru });
+      return;
+    }
     if (mode !== 'edit' || location.state?.guru) return;
     getGuruList({ page: 1, limit: 200, status: '' })
       .then((data) => {
@@ -39,7 +44,7 @@ export default function GuruFormPage() {
       })
       .catch((err) => setError(err.message || 'Gagal memuat data guru.'))
       .finally(() => setIsLoading(false));
-  }, [location.state, mode, params.guruId]);
+  }, [initialGuru, location.state, mode, params.guruId]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -67,7 +72,9 @@ export default function GuruFormPage() {
     try {
       if (mode === 'edit') await updateGuru(form);
       else await createGuru(form);
-      navigate('/guru', { replace: true, state: { message: mode === 'edit' ? 'Guru berhasil diperbarui.' : 'Guru berhasil ditambahkan.' } });
+      const message = mode === 'edit' ? 'Guru berhasil diperbarui.' : 'Guru berhasil ditambahkan.';
+      if (onSaved) onSaved(message);
+      else navigate('/guru', { replace: true, state: { message } });
     } catch (err) {
       const message = err.message || 'Gagal menyimpan guru.';
       setError(message);
@@ -81,7 +88,7 @@ export default function GuruFormPage() {
 
   return (
     <section className="space-y-6">
-      <PageHeader eyebrow="Data Master" title={title} description="Data guru mengikuti Sheet Guru dan dapat dikaitkan dengan user login." actions={<Link className="button button-secondary" to="/guru">Kembali</Link>} />
+      {!onSaved ? <PageHeader eyebrow="Data Master" title={title} description="Data guru mengikuti Sheet Guru dan dapat dikaitkan dengan user login." actions={<Link className="button button-secondary" to="/guru">Kembali</Link>} /> : null}
       {error ? <ErrorState description={error} /> : null}
       <form className="space-y-5" onSubmit={handleSubmit}>
         <FormCard title="Informasi Guru" description="Role guru dipakai untuk akses modul nilai, hafalan, dan wali kelas.">
@@ -103,7 +110,7 @@ export default function GuruFormPage() {
             </SelectField>
           </div>
         </FormCard>
-        <Actions isSaving={isSaving} />
+        <Actions isSaving={isSaving} onCancel={onCancel} />
       </form>
     </section>
   );
@@ -117,6 +124,6 @@ function SelectField({ label, children, ...props }) {
   return <label className="grid gap-1.5 text-sm font-semibold text-slate-700">{label}<select className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" {...props}>{children}</select></label>;
 }
 
-function Actions({ isSaving }) {
-  return <div className="flex justify-end gap-2"><Link className="button button-secondary" to="/guru">Batal</Link><button className="button button-primary gap-2" type="submit" disabled={isSaving}>{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{isSaving ? 'Menyimpan...' : 'Simpan'}</button></div>;
+function Actions({ isSaving, onCancel }) {
+  return <div className="flex justify-end gap-2">{onCancel ? <button className="button button-secondary" type="button" onClick={onCancel}>Batal</button> : <Link className="button button-secondary" to="/guru">Batal</Link>}<button className="button button-primary gap-2" type="submit" disabled={isSaving}>{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{isSaving ? 'Menyimpan...' : 'Simpan'}</button></div>;
 }

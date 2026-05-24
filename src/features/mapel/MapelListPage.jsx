@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import ErrorState from '../../components/ui/ErrorState.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
+import FormModal from '../../components/ui/FormModal.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
+import MapelFormPage from './MapelFormPage.jsx';
 import { deleteMapel, getMapelList } from './mapelService.js';
 
 const initialFilters = {
@@ -17,7 +19,6 @@ const initialFilters = {
 };
 
 export default function MapelListPage() {
-  const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
   const [filters, setFilters] = useState(initialFilters);
@@ -25,6 +26,7 @@ export default function MapelListPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [formModal, setFormModal] = useState(null);
   const total = useMemo(() => rows.length, [rows]);
 
   useEffect(() => {
@@ -77,6 +79,12 @@ export default function MapelListPage() {
     }
   }
 
+  async function handleSaved(message) {
+    setFormModal(null);
+    showToast({ title: 'Mata pelajaran', description: message, variant: 'success' });
+    await loadRows(filters);
+  }
+
   const columns = [
     { key: 'namaMapel', header: 'Mata Pelajaran', render: (row) => <strong className="text-slate-950">{row.namaMapel || '-'}</strong> },
     { key: 'kelompok', header: 'Kelompok', render: (row) => row.kelompok || '-' },
@@ -87,7 +95,7 @@ export default function MapelListPage() {
       header: 'Aksi',
       render: (row) => (
         <div className="flex gap-2">
-          <button className="text-button" type="button" onClick={() => navigate(`/mapel/${row.mapelId}/edit`, { state: { mapel: row } })}>Edit</button>
+          <button className="text-button" type="button" onClick={() => setFormModal({ mode: 'edit', item: row })}>Edit</button>
           <button className="text-button danger" type="button" onClick={() => setDeleteTarget(row)}>Nonaktifkan</button>
         </div>
       )
@@ -100,7 +108,7 @@ export default function MapelListPage() {
         eyebrow="Data Master"
         title="Mata Pelajaran"
         description="Kelola mata pelajaran, kelompok mapel, guru pengampu, dan status aktif."
-        actions={<Link className="button button-primary gap-2" to="/mapel/tambah"><Plus className="h-4 w-4" />Tambah Mapel</Link>}
+        actions={<button className="button button-primary gap-2" type="button" onClick={() => setFormModal({ mode: 'create' })}><Plus className="h-4 w-4" />Tambah Mapel</button>}
       />
 
       <FilterBar onSubmit={(event) => { event.preventDefault(); loadRows(filters); }}>
@@ -130,6 +138,21 @@ export default function MapelListPage() {
       </section>
 
       <ConfirmDialog open={Boolean(deleteTarget)} title="Nonaktifkan mapel?" description={`${deleteTarget?.namaMapel || 'Mapel'} akan diubah menjadi nonaktif.`} confirmLabel="Nonaktifkan" onCancel={() => setDeleteTarget(null)} onConfirm={handleDelete} />
+
+      <FormModal
+        open={Boolean(formModal)}
+        title={formModal?.mode === 'edit' ? 'Edit Mata Pelajaran' : 'Tambah Mata Pelajaran'}
+        description="Isi mata pelajaran tanpa meninggalkan daftar."
+        onClose={() => setFormModal(null)}
+      >
+        <MapelFormPage
+          key={`${formModal?.mode || 'closed'}-${formModal?.item?.mapelId || 'new'}`}
+          modalMode={formModal?.mode}
+          initialMapel={formModal?.item}
+          onCancel={() => setFormModal(null)}
+          onSaved={handleSaved}
+        />
+      </FormModal>
     </section>
   );
 }

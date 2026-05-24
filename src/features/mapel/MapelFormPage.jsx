@@ -15,19 +15,24 @@ const emptyForm = {
   status: 'aktif'
 };
 
-export default function MapelFormPage() {
+export default function MapelFormPage({ modalMode, initialMapel, onCancel, onSaved }) {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
   const { showToast } = useToast();
-  const mode = params.mapelId ? 'edit' : 'create';
-  const [form, setForm] = useState(() => ({ ...emptyForm, ...location.state?.mapel, mapelId: location.state?.mapel?.mapelId || params.mapelId || '' }));
+  const mode = modalMode || (params.mapelId ? 'edit' : 'create');
+  const initialData = initialMapel || location.state?.mapel;
+  const [form, setForm] = useState(() => ({ ...emptyForm, ...initialData, mapelId: initialData?.mapelId || params.mapelId || '' }));
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(mode === 'edit' && !location.state?.mapel);
   const [isSaving, setIsSaving] = useState(false);
   const title = useMemo(() => (mode === 'edit' ? 'Edit Mata Pelajaran' : 'Tambah Mata Pelajaran'), [mode]);
 
   useEffect(() => {
+    if (initialMapel) {
+      setForm({ ...emptyForm, ...initialMapel });
+      return;
+    }
     if (mode !== 'edit' || location.state?.mapel) return;
     getMapelList({ page: 1, limit: 200, status: '' })
       .then((data) => {
@@ -37,7 +42,7 @@ export default function MapelFormPage() {
       })
       .catch((err) => setError(err.message || 'Gagal memuat mata pelajaran.'))
       .finally(() => setIsLoading(false));
-  }, [location.state, mode, params.mapelId]);
+  }, [initialMapel, location.state, mode, params.mapelId]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -64,7 +69,9 @@ export default function MapelFormPage() {
     try {
       if (mode === 'edit') await updateMapel(form);
       else await createMapel(form);
-      navigate('/mapel', { replace: true, state: { message: mode === 'edit' ? 'Mata pelajaran berhasil diperbarui.' : 'Mata pelajaran berhasil ditambahkan.' } });
+      const message = mode === 'edit' ? 'Mata pelajaran berhasil diperbarui.' : 'Mata pelajaran berhasil ditambahkan.';
+      if (onSaved) onSaved(message);
+      else navigate('/mapel', { replace: true, state: { message } });
     } catch (err) {
       const message = err.message || 'Gagal menyimpan mata pelajaran.';
       setError(message);
@@ -78,7 +85,7 @@ export default function MapelFormPage() {
 
   return (
     <section className="space-y-6">
-      <PageHeader eyebrow="Data Master" title={title} description="Mapel digunakan pada input dan rekap nilai akademik." actions={<Link className="button button-secondary" to="/mapel">Kembali</Link>} />
+      {!onSaved ? <PageHeader eyebrow="Data Master" title={title} description="Mapel digunakan pada input dan rekap nilai akademik." actions={<Link className="button button-secondary" to="/mapel">Kembali</Link>} /> : null}
       {error ? <ErrorState description={error} /> : null}
       <form className="space-y-5" onSubmit={handleSubmit}>
         <FormCard title="Informasi Mata Pelajaran" description="Kelompok membantu pemisahan mapel umum, agama, dan tahfidz.">
@@ -98,7 +105,7 @@ export default function MapelFormPage() {
             </SelectField>
           </div>
         </FormCard>
-        <Actions isSaving={isSaving} />
+        <Actions isSaving={isSaving} onCancel={onCancel} />
       </form>
     </section>
   );
@@ -112,6 +119,6 @@ function SelectField({ label, children, ...props }) {
   return <label className="grid gap-1.5 text-sm font-semibold text-slate-700">{label}<select className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" {...props}>{children}</select></label>;
 }
 
-function Actions({ isSaving }) {
-  return <div className="flex justify-end gap-2"><Link className="button button-secondary" to="/mapel">Batal</Link><button className="button button-primary gap-2" type="submit" disabled={isSaving}>{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{isSaving ? 'Menyimpan...' : 'Simpan'}</button></div>;
+function Actions({ isSaving, onCancel }) {
+  return <div className="flex justify-end gap-2">{onCancel ? <button className="button button-secondary" type="button" onClick={onCancel}>Batal</button> : <Link className="button button-secondary" to="/mapel">Batal</Link>}<button className="button button-primary gap-2" type="submit" disabled={isSaving}>{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{isSaving ? 'Menyimpan...' : 'Simpan'}</button></div>;
 }

@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react';
-import { BookOpen, CheckCircle2, ClipboardList, Loader2, Save, Search, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { BookOpen, CheckCircle2, ClipboardList, Loader2, Save, Sparkles } from 'lucide-react';
 import EmptyState from '../../components/ui/EmptyState.jsx';
 import LoadingState from '../../components/ui/LoadingState.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
+import SelectInput from '../../components/ui/SelectInput.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { cn } from '../../lib/utils.js';
+import { getKelasList } from '../kelas/kelasService.js';
 import { getSiswaList } from '../siswa/siswaService.js';
 import { bulkSaveNilai } from './nilaiService.js';
 
@@ -28,8 +30,11 @@ export default function NilaiInputPage() {
   const { showToast } = useToast();
   const [filters, setFilters] = useState(initialFilters);
   const [rows, setRows] = useState([]);
+  const [kelasRows, setKelasRows] = useState([]);
   const [error, setError] = useState('');
+  const [kelasError, setKelasError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingKelas, setIsLoadingKelas] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const filledRows = useMemo(
@@ -45,6 +50,28 @@ export default function NilaiInputPage() {
     if (!valid.length) return 0;
     return valid.reduce((sum, row) => sum + Number(row.nilai), 0) / valid.length;
   }, [filledRows]);
+  const isReadyToSave = Boolean(filters.kelasId && filters.mapelId && filters.semester && filters.tahunAjaran && filters.jenisNilai);
+
+  useEffect(() => {
+    setIsLoadingKelas(true);
+    getKelasList({ status: 'aktif', page: 1, limit: 200 })
+      .then((data) => {
+        setKelasRows(data.items || []);
+        setKelasError('');
+      })
+      .catch((err) => setKelasError(err.message || 'Gagal memuat data kelas.'))
+      .finally(() => setIsLoadingKelas(false));
+  }, []);
+
+  useEffect(() => {
+    if (!filters.kelasId) {
+      setRows([]);
+      setError('');
+      return;
+    }
+
+    loadStudentsByClass(filters.kelasId);
+  }, [filters.kelasId]);
 
   function handleFilterChange(event) {
     const { name, value } = event.target;
@@ -60,22 +87,13 @@ export default function NilaiInputPage() {
     return '';
   }
 
-  async function handleLoadStudents(event) {
-    event.preventDefault();
-    const validationMessage = validateFilters();
-
-    if (validationMessage) {
-      setError(validationMessage);
-      showToast({ title: 'Filter belum lengkap', description: validationMessage, variant: 'error' });
-      return;
-    }
-
+  async function loadStudentsByClass(kelasId) {
     setError('');
     setIsLoading(true);
 
     try {
       const data = await getSiswaList({
-        kelasId: filters.kelasId,
+        kelasId,
         status: 'aktif',
         page: 1,
         limit: 100
@@ -90,11 +108,6 @@ export default function NilaiInputPage() {
       }));
 
       setRows(nextRows);
-      showToast({
-        title: 'Data siswa dimuat',
-        description: `${nextRows.length} siswa aktif siap diinput.`,
-        variant: 'success'
-      });
     } catch (err) {
       setRows([]);
       const message = err.message || 'Gagal memuat siswa';
@@ -166,38 +179,44 @@ export default function NilaiInputPage() {
         }
       />
 
-      <form className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" onSubmit={handleLoadStudents}>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_0.9fr_1fr_1fr_auto] xl:items-end">
-          <Field label="Kelas">
-            <input name="kelasId" value={filters.kelasId} onChange={handleFilterChange} placeholder="KLS001" />
-          </Field>
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <SelectInput label="Kelas" name="kelasId" value={filters.kelasId} onChange={handleFilterChange} disabled={isLoadingKelas}>
+            <option value="">{isLoadingKelas ? 'Memuat kelas...' : 'Pilih kelas'}</option>
+            {kelasRows.map((kelas) => (
+              <option key={kelas.kelasId} value={kelas.kelasId}>
+                {kelas.namaKelas || kelas.kelasId}
+              </option>
+            ))}
+          </SelectInput>
           <Field label="Mapel">
-            <input name="mapelId" value={filters.mapelId} onChange={handleFilterChange} placeholder="MPL001" />
+            <input className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" name="mapelId" value={filters.mapelId} onChange={handleFilterChange} placeholder="MPL001" />
           </Field>
-          <Field label="Semester">
-            <select name="semester" value={filters.semester} onChange={handleFilterChange}>
-              <option value="Ganjil">Ganjil</option>
-              <option value="Genap">Genap</option>
-            </select>
-          </Field>
+          <SelectInput label="Semester" name="semester" value={filters.semester} onChange={handleFilterChange}>
+            <option value="Ganjil">Ganjil</option>
+            <option value="Genap">Genap</option>
+          </SelectInput>
           <Field label="Tahun Ajaran">
-            <input name="tahunAjaran" value={filters.tahunAjaran} onChange={handleFilterChange} placeholder="2026/2027" />
+            <input className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" name="tahunAjaran" value={filters.tahunAjaran} onChange={handleFilterChange} placeholder="2026/2027" />
           </Field>
-          <Field label="Jenis Nilai">
-            <select name="jenisNilai" value={filters.jenisNilai} onChange={handleFilterChange}>
-              {jenisNilaiOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <button className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-70" type="submit" disabled={isLoading}>
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            Tampilkan
-          </button>
+          <SelectInput label="Jenis Nilai" name="jenisNilai" value={filters.jenisNilai} onChange={handleFilterChange}>
+            {jenisNilaiOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </SelectInput>
         </div>
-      </form>
+        <p className="mt-3 text-xs font-medium text-slate-500">
+          Pilih kelas untuk memuat siswa aktif otomatis. Guru tidak perlu memilih siswa satu per satu.
+        </p>
+      </div>
+
+      {kelasError ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+          {kelasError}
+        </div>
+      ) : null}
 
       {error ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
@@ -225,7 +244,14 @@ export default function NilaiInputPage() {
           </div>
         </div>
 
-        {isLoading ? (
+        {!filters.kelasId ? (
+          <div className="p-5">
+            <EmptyState
+              title="Pilih kelas terlebih dahulu"
+              description="Setelah kelas dipilih, siswa aktif di kelas tersebut akan tampil otomatis."
+            />
+          </div>
+        ) : isLoading ? (
           <div className="p-5">
             <LoadingState label="Memuat siswa aktif..." />
           </div>
@@ -292,8 +318,8 @@ export default function NilaiInputPage() {
         ) : (
           <div className="p-5">
             <EmptyState
-              title="Belum ada siswa ditampilkan"
-              description="Lengkapi filter kelas dan klik Tampilkan untuk memuat siswa aktif."
+              title="Belum ada siswa di kelas ini"
+              description="Pilih kelas lain atau tambahkan siswa aktif ke kelas tersebut."
             />
           </div>
         )}
@@ -311,7 +337,7 @@ export default function NilaiInputPage() {
             className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
             type="button"
             onClick={handleSave}
-            disabled={isSaving || !filledRows.length || invalidRows.length > 0}
+            disabled={isSaving || !isReadyToSave || invalidRows.length > 0}
           >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Simpan Semua

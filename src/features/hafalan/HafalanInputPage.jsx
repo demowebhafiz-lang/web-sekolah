@@ -1,10 +1,16 @@
-import { useMemo, useState } from 'react';
+import { cloneElement, isValidElement, useEffect, useMemo, useState } from 'react';
 import { BookOpenCheck, CalendarDays, CheckCircle2, Loader2, Save, Sparkles, UserRound } from 'lucide-react';
+import AvatarImage from '../../components/AvatarImage.jsx';
+import EmptyState from '../../components/ui/EmptyState.jsx';
+import LoadingState from '../../components/ui/LoadingState.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
+import SelectInput from '../../components/ui/SelectInput.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { cn } from '../../lib/utils.js';
-import { createHafalan } from './hafalanService.js';
+import { getKelasList } from '../kelas/kelasService.js';
+import { getSiswaList } from '../siswa/siswaService.js';
+import { createHafalan, getRiwayatHafalanSiswa } from './hafalanService.js';
 
 const initialForm = {
   kelasId: '',
@@ -31,18 +37,25 @@ const statusOptions = [
   { value: 'selesai', label: 'Selesai' }
 ];
 
-const initialHistory = [
-  { id: 'demo-1', tanggalSetor: '2026-05-20', surah: 'An-Naba', juz: 30, ayat: '1-10', statusHafalan: 'lancar', rataRata: 88 },
-  { id: 'demo-2', tanggalSetor: '2026-05-17', surah: 'An-Naziat', juz: 30, ayat: '1-8', statusHafalan: 'murajaah', rataRata: 76 }
-];
-
 export default function HafalanInputPage() {
   const { showToast } = useToast();
   const [form, setForm] = useState(initialForm);
-  const [history, setHistory] = useState(initialHistory);
+  const [kelasRows, setKelasRows] = useState([]);
+  const [siswaRows, setSiswaRows] = useState([]);
+  const [history, setHistory] = useState([]);
   const [error, setError] = useState('');
+  const [kelasError, setKelasError] = useState('');
+  const [siswaError, setSiswaError] = useState('');
+  const [historyError, setHistoryError] = useState('');
+  const [isLoadingKelas, setIsLoadingKelas] = useState(false);
+  const [isLoadingSiswa, setIsLoadingSiswa] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const selectedStudent = useMemo(
+    () => siswaRows.find((student) => String(student.siswaId) === String(form.siswaId)) || null,
+    [form.siswaId, siswaRows]
+  );
   const rataRata = useMemo(() => {
     const scores = [
       form.nilaiKelancaran,
@@ -54,8 +67,12 @@ export default function HafalanInputPage() {
     if (scores.some((score) => Number.isNaN(score))) return '';
     return (scores.reduce((sum, score) => sum + score, 0) / 4).toFixed(1);
   }, [form.nilaiAdab, form.nilaiKelancaran, form.nilaiMakhraj, form.nilaiTajwid]);
-
   const progress = useMemo(() => {
+    const latest = history[0];
+    if (latest?.rataRata) {
+      return Math.min(100, Math.round(Number(latest.rataRata)));
+    }
+
     const juz = Number(form.juz);
     const start = Number(form.ayatAwal);
     const end = Number(form.ayatAkhir);
@@ -65,7 +82,60 @@ export default function HafalanInputPage() {
     }
 
     return Math.min(100, Math.round(((end - start + 1) / 40) * 100));
-  }, [form.ayatAkhir, form.ayatAwal, form.juz]);
+  }, [form.ayatAkhir, form.ayatAwal, form.juz, history]);
+
+  useEffect(() => {
+    setIsLoadingKelas(true);
+    getKelasList({ status: 'aktif', page: 1, limit: 200 })
+      .then((data) => {
+        setKelasRows(data.items || []);
+        setKelasError('');
+      })
+      .catch((err) => setKelasError(err.message || 'Gagal memuat data kelas.'))
+      .finally(() => setIsLoadingKelas(false));
+  }, []);
+
+  useEffect(() => {
+    if (!form.kelasId) {
+      setSiswaRows([]);
+      setHistory([]);
+      setSiswaError('');
+      setHistoryError('');
+      return;
+    }
+
+    setIsLoadingSiswa(true);
+    setSiswaError('');
+    setHistory([]);
+    setForm((current) => ({ ...current, siswaId: '' }));
+
+    getSiswaList({ kelasId: form.kelasId, status: 'aktif', page: 1, limit: 200 })
+      .then((data) => setSiswaRows(data.items || []))
+      .catch((err) => {
+        setSiswaRows([]);
+        setSiswaError(err.message || 'Gagal memuat siswa di kelas ini.');
+      })
+      .finally(() => setIsLoadingSiswa(false));
+  }, [form.kelasId]);
+
+  useEffect(() => {
+    if (!form.siswaId) {
+      setHistory([]);
+      setHistoryError('');
+      return;
+    }
+
+    setIsLoadingHistory(true);
+    setHistoryError('');
+
+    getRiwayatHafalanSiswa({ siswaId: form.siswaId })
+      .then((data) => setHistory(data.items || []))
+      .catch((err) => {
+        setHistory([]);
+        setHistoryError(err.message || 'Gagal memuat riwayat hafalan siswa.');
+      })
+      .finally(() => setIsLoadingHistory(false));
+  }, [form.siswaId]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -74,8 +144,8 @@ export default function HafalanInputPage() {
 
   function validate() {
     const requiredFields = [
-      ['kelasId', 'Kelas ID'],
-      ['siswaId', 'Siswa ID'],
+      ['kelasId', 'Kelas'],
+      ['siswaId', 'Siswa'],
       ['juz', 'Juz'],
       ['surah', 'Surah'],
       ['nomorSurah', 'Nomor surah'],
@@ -123,18 +193,6 @@ export default function HafalanInputPage() {
     try {
       const data = await createHafalan(form);
       const average = data.rataRata ? Number(data.rataRata).toFixed(1) : rataRata;
-      setHistory((current) => [
-        {
-          id: data.hafalanId || `${form.siswaId}-${Date.now()}`,
-          tanggalSetor: form.tanggalSetor,
-          surah: form.surah,
-          juz: form.juz,
-          ayat: `${form.ayatAwal}-${form.ayatAkhir}`,
-          statusHafalan: form.statusHafalan,
-          rataRata: average
-        },
-        ...current
-      ].slice(0, 5));
 
       showToast({
         title: 'Hafalan berhasil disimpan',
@@ -148,6 +206,9 @@ export default function HafalanInputPage() {
         siswaId: current.siswaId,
         tanggalSetor: current.tanggalSetor
       }));
+
+      const nextHistory = await getRiwayatHafalanSiswa({ siswaId: form.siswaId });
+      setHistory(nextHistory.items || []);
     } catch (err) {
       const message = err.message || 'Gagal menyimpan hafalan';
       setError(message);
@@ -162,31 +223,58 @@ export default function HafalanInputPage() {
       <PageHeader
         eyebrow="Hafalan Al-Qur'an"
         title="Input Hafalan"
-        description="Catat setoran hafalan, nilai bacaan, dan status progres siswa dalam satu tampilan."
+        description="Pilih kelas terlebih dahulu, lalu pilih siswa dari kelas tersebut untuk memuat riwayat otomatis."
         actions={<StatusBadge status={form.statusHafalan} />}
       />
 
-      {error ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-          {error}
-        </div>
-      ) : null}
+      {kelasError ? <InlineAlert tone="warning" message={kelasError} /> : null}
+      {siswaError ? <InlineAlert tone="error" message={siswaError} /> : null}
+      {historyError ? <InlineAlert tone="warning" message={historyError} /> : null}
+      {error ? <InlineAlert tone="error" message={error} /> : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <form className="space-y-5" onSubmit={handleSubmit}>
           <SectionCard
             icon={UserRound}
             title="Data Siswa"
-            description="Identitas dasar siswa untuk relasi data hafalan."
+            description="Dropdown siswa otomatis mengikuti kelas yang dipilih."
           >
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Kelas ID">
-                <input name="kelasId" value={form.kelasId} onChange={handleChange} placeholder="KLS001" required />
-              </Field>
-              <Field label="Siswa ID">
-                <input name="siswaId" value={form.siswaId} onChange={handleChange} placeholder="SIS001" required />
-              </Field>
+              <SelectInput label="Kelas" name="kelasId" value={form.kelasId} onChange={handleChange} disabled={isLoadingKelas}>
+                <option value="">{isLoadingKelas ? 'Memuat kelas...' : 'Pilih kelas'}</option>
+                {kelasRows.map((kelas) => (
+                  <option key={kelas.kelasId} value={kelas.kelasId}>
+                    {kelas.namaKelas || kelas.kelasId}
+                  </option>
+                ))}
+              </SelectInput>
+              <SelectInput label="Siswa" name="siswaId" value={form.siswaId} onChange={handleChange} disabled={!form.kelasId || isLoadingSiswa || !siswaRows.length}>
+                <option value="">
+                  {!form.kelasId ? 'Pilih kelas terlebih dahulu' : isLoadingSiswa ? 'Memuat siswa...' : siswaRows.length ? 'Pilih siswa' : 'Belum ada siswa di kelas ini'}
+                </option>
+                {siswaRows.map((student) => (
+                  <option key={student.siswaId} value={student.siswaId}>
+                    {student.namaLengkap || student.siswaId}
+                  </option>
+                ))}
+              </SelectInput>
             </div>
+
+            {form.kelasId && !isLoadingSiswa && !siswaRows.length ? (
+              <div className="mt-4">
+                <EmptyState title="Belum ada siswa di kelas ini" description="Tambahkan siswa aktif ke kelas tersebut atau pilih kelas lain." />
+              </div>
+            ) : null}
+
+            {selectedStudent ? (
+              <div className="mt-5 flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <AvatarImage className="h-16 w-16 text-lg" name={selectedStudent.namaLengkap} src={selectedStudent.fotoUrl} />
+                <div>
+                  <p className="font-semibold text-slate-950">{selectedStudent.namaLengkap || '-'}</p>
+                  <p className="text-sm text-slate-500">NIS {selectedStudent.nis || '-'} · Kelas {selectedStudent.kelasId || form.kelasId}</p>
+                </div>
+              </div>
+            ) : null}
           </SectionCard>
 
           <SectionCard
@@ -213,15 +301,13 @@ export default function HafalanInputPage() {
               <Field label="Tanggal Setor">
                 <input name="tanggalSetor" type="date" value={form.tanggalSetor} onChange={handleChange} required />
               </Field>
-              <Field label="Status Hafalan">
-                <select name="statusHafalan" value={form.statusHafalan} onChange={handleChange}>
-                  {statusOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+              <SelectInput label="Status Hafalan" name="statusHafalan" value={form.statusHafalan} onChange={handleChange}>
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </SelectInput>
               <div className="md:col-span-2">
                 <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
                   Catatan
@@ -267,10 +353,10 @@ export default function HafalanInputPage() {
                 </span>
                 <div>
                   <p className="font-semibold text-slate-950">Siap menyimpan setoran</p>
-                  <p className="text-slate-500">Pastikan status dan nilai bacaan sudah benar.</p>
+                  <p className="text-slate-500">Pastikan kelas, siswa, status, dan nilai bacaan sudah benar.</p>
                 </div>
               </div>
-              <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-70" type="submit" disabled={isSaving}>
+              <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-70" type="submit" disabled={isSaving || !form.kelasId || !form.siswaId}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Simpan Hafalan
               </button>
@@ -283,13 +369,13 @@ export default function HafalanInputPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-slate-950">Progress Hafalan Siswa</h2>
-                <p className="mt-1 text-sm text-slate-500">Estimasi dari rentang ayat input saat ini.</p>
+                <p className="mt-1 text-sm text-slate-500">Mengikuti siswa yang dipilih.</p>
               </div>
               <CalendarDays className="h-5 w-5 text-amber-600" />
             </div>
             <div className="mt-5">
               <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="font-medium text-slate-600">Progress setoran</span>
+                <span className="font-medium text-slate-600">Progress terakhir</span>
                 <span className="font-semibold text-slate-950">{progress}%</span>
               </div>
               <div className="h-3 rounded-full bg-slate-200">
@@ -297,7 +383,7 @@ export default function HafalanInputPage() {
               </div>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3">
-              <MiniMetric label="Juz" value={form.juz || '-'} />
+              <MiniMetric label="Siswa" value={selectedStudent?.namaLengkap || '-'} />
               <MiniMetric label="Status" value={<StatusBadge status={form.statusHafalan} />} />
             </div>
           </section>
@@ -305,25 +391,33 @@ export default function HafalanInputPage() {
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4">
               <h2 className="text-base font-semibold text-slate-950">Riwayat Terakhir</h2>
-              <p className="mt-1 text-sm text-slate-500">Setoran terbaru siswa akan tampil di sini.</p>
+              <p className="mt-1 text-sm text-slate-500">Riwayat dimuat otomatis setelah siswa dipilih.</p>
             </div>
-            <div className="space-y-3">
-              {history.map((item) => (
-                <article className="rounded-xl border border-slate-100 bg-slate-50 p-3" key={item.id}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-950">{item.surah}</p>
-                      <p className="text-xs text-slate-500">Juz {item.juz} · Ayat {item.ayat}</p>
+            {!form.siswaId ? (
+              <EmptyState title="Pilih siswa" description="Riwayat hafalan akan tampil setelah siswa dipilih." />
+            ) : isLoadingHistory ? (
+              <LoadingState label="Memuat riwayat hafalan..." />
+            ) : history.length ? (
+              <div className="space-y-3">
+                {history.slice(0, 5).map((item) => (
+                  <article className="rounded-xl border border-slate-100 bg-slate-50 p-3" key={item.hafalanId || `${item.siswaId}-${item.tanggalSetor}-${item.ayatAwal}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-950">{item.surah || '-'}</p>
+                        <p className="text-xs text-slate-500">Juz {item.juz || '-'} · Ayat {item.ayatAwal || '-'}-{item.ayatAkhir || '-'}</p>
+                      </div>
+                      <StatusBadge status={item.statusHafalan || 'baru'} />
                     </div>
-                    <StatusBadge status={item.statusHafalan} />
-                  </div>
-                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-                    <span>{item.tanggalSetor}</span>
-                    <span className="font-semibold text-slate-700">Rata {Number(item.rataRata).toFixed(1)}</span>
-                  </div>
-                </article>
-              ))}
-            </div>
+                    <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                      <span>{item.tanggalSetor || '-'}</span>
+                      <span className="font-semibold text-slate-700">Rata {formatNumber(item.rataRata)}</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="Belum ada riwayat" description="Siswa ini belum memiliki setoran hafalan." />
+            )}
           </section>
         </aside>
       </div>
@@ -349,10 +443,19 @@ function SectionCard({ icon: Icon, title, description, children }) {
 }
 
 function Field({ label, children }) {
+  const control = isValidElement(children)
+    ? cloneElement(children, {
+      className: cn(
+        'h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100',
+        children.props.className
+      )
+    })
+    : children;
+
   return (
     <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
       {label}
-      {children}
+      {control}
     </label>
   );
 }
@@ -385,12 +488,25 @@ function MiniMetric({ label, value }) {
   return (
     <div className="rounded-xl bg-slate-50 p-3">
       <p className="text-xs font-medium text-slate-500">{label}</p>
-      <div className="mt-1 text-sm font-semibold text-slate-950">{value}</div>
+      <div className="mt-1 truncate text-sm font-semibold text-slate-950">{value}</div>
     </div>
   );
+}
+
+function InlineAlert({ message, tone = 'error' }) {
+  const className = tone === 'warning'
+    ? 'border-amber-200 bg-amber-50 text-amber-800'
+    : 'border-rose-200 bg-rose-50 text-rose-700';
+
+  return <div className={`rounded-xl border px-4 py-3 text-sm font-medium ${className}`}>{message}</div>;
 }
 
 function isInRange(value, min, max) {
   const number = Number(value);
   return !Number.isNaN(number) && number >= min && number <= max;
+}
+
+function formatNumber(value) {
+  const number = Number(value);
+  return Number.isNaN(number) ? '-' : number.toFixed(1);
 }

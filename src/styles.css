@@ -301,6 +301,11 @@
   .report-table td {
     @apply border border-slate-200 px-3 py-2 text-slate-700;
   }
+
+  .print-page-break {
+    break-after: page;
+    page-break-after: always;
+  }
 }
 
 @media print {
@@ -315,6 +320,7 @@
 
   aside,
   .app-topbar,
+  .report-filter,
   button,
   .no-print {
     display: none !important;

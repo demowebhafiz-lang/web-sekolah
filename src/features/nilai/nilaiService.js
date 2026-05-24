@@ -5,6 +5,10 @@ export function bulkSaveNilai(payload) {
   return gasRequest('bulkSaveNilai', normalizeNilaiPayload(payload), getSessionToken());
 }
 
+export function getRekapNilai(filters = {}) {
+  return gasRequest('getRekapNilai', cleanObject(filters), getSessionToken());
+}
+
 function normalizeNilaiPayload(payload) {
   const user = getStoredUser();
 
@@ -25,4 +29,12 @@ function normalizeNilaiPayload(payload) {
 
 function clean(value) {
   return String(value ?? '').trim();
+}
+
+function cleanObject(object) {
+  return Object.fromEntries(
+    Object.entries(object)
+      .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
+      .filter(([, value]) => value !== '' && value !== undefined && value !== null)
+  );
 }

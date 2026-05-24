@@ -12,7 +12,7 @@ import SchoolLogo from '../../components/SchoolLogo.jsx';
 import { getKelasList } from '../kelas/kelasService.js';
 import { getRekapHafalan } from '../hafalan/hafalanService.js';
 import { getRekapNilai } from '../nilai/nilaiService.js';
-import { getPublicSettings } from '../settings/settingsService.js';
+import { getAppSettings } from '../settings/settingsService.js';
 import { getSiswaList } from '../siswa/siswaService.js';
 
 const initialFilters = {
@@ -56,7 +56,7 @@ export default function LaporanSiswaPage() {
       .catch((err) => setKelasError(err.message || 'Gagal memuat data kelas.'))
       .finally(() => setIsLoadingKelas(false));
 
-    getPublicSettings()
+    getAppSettings()
       .then(setSettings)
       .catch(() => setSettings({}));
   }, []);
@@ -374,9 +374,17 @@ function ReportPage({ report, settings, filters, kelas, pageBreak }) {
 }
 
 function ReportHeader({ settings }) {
+  const logoUrl = settings.schoolLogoUrl || settings.logoUrl || '/logo.png';
+
   return (
     <header className="report-header flex items-center gap-4 border-b-2 border-slate-900 pb-5">
-      <SchoolLogo className="h-16 w-16 rounded-2xl print:border print:border-slate-900" fallbackClassName="bg-emerald-600 text-white print:bg-white print:text-slate-900" />
+      <span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 print:border print:border-slate-900 print:ring-0">
+        {logoUrl ? (
+          <img alt="Logo sekolah" className="h-full w-full object-contain p-1.5" src={logoUrl} />
+        ) : (
+          <SchoolLogo className="h-16 w-16 rounded-2xl print:border print:border-slate-900" fallbackClassName="bg-emerald-600 text-white print:bg-white print:text-slate-900" />
+        )}
+      </span>
       <div className="text-center sm:flex-1">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700 print:text-slate-900">Laporan Sekolah</p>
         <h2 className="mt-1 text-2xl font-bold uppercase tracking-wide text-slate-950">{settings.schoolName || 'Nama Sekolah'}</h2>

@@ -6,7 +6,7 @@ import { getAppSettings, getStoredSettings } from '../features/settings/settings
 export default function SchoolLogo({ className, fallbackClassName, showImageOnly = false }) {
   const [settings, setSettings] = useState(() => getStoredSettings());
   const [defaultLogoFailed, setDefaultLogoFailed] = useState(false);
-  const logoUrl = settings?.logoUrl || (!defaultLogoFailed ? '/logo.png' : '');
+  const logoUrl = settings?.schoolLogoUrl || settings?.logoUrl || (!defaultLogoFailed ? '/logo.png' : '');
 
   useEffect(() => {
     let isMounted = true;

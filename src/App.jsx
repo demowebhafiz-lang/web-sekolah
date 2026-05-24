@@ -15,8 +15,8 @@ import LaporanSiswaPage from './features/laporan/LaporanSiswaPage.jsx';
 import MapelFormPage from './features/mapel/MapelFormPage.jsx';
 import MapelListPage from './features/mapel/MapelListPage.jsx';
 import NilaiInputPage from './features/nilai/NilaiInputPage.jsx';
+import NilaiRekapPage from './features/nilai/NilaiRekapPage.jsx';
 import SettingsPage from './features/settings/SettingsPage.jsx';
-import PlaceholderPage from './features/shared/PlaceholderPage.jsx';
 import SiswaFormPage from './features/siswa/SiswaFormPage.jsx';
 import SiswaListPage from './features/siswa/SiswaListPage.jsx';
 import SiswaProfilePage from './features/siswa/SiswaProfilePage.jsx';
@@ -97,10 +97,7 @@ export default function App() {
         />
         <Route
           path="nilai/rekap"
-          element={protectedPage(
-            <PlaceholderPage title="Rekap Nilai" action="Lihat rekap nilai berdasarkan filter akademik." />,
-            ROUTE_ROLES.rekapNilai
-          )}
+          element={protectedPage(<NilaiRekapPage />, ROUTE_ROLES.rekapNilai)}
         />
         <Route
           path="hafalan/input"

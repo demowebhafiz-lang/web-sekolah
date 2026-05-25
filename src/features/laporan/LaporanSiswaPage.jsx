@@ -100,6 +100,12 @@ export default function LaporanSiswaPage() {
       .finally(() => setIsLoadingSiswa(false));
   }, [filters.kelasId]);
 
+  useEffect(() => {
+    if (currentUser?.role === ROLES.ORANG_TUA && currentUser?.siswaId && filters.kelasId && filters.siswaId) {
+      loadReports('single');
+    }
+  }, [currentUser, filters.kelasId, filters.siswaId]);
+
   function handleFilterChange(event) {
     const { name, value } = event.target;
     setFilters((current) => ({ ...current, [name]: value }));

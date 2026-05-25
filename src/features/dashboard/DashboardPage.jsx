@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis
 } from 'recharts';
-import { AlertCircle, BookOpenCheck, GraduationCap, School, TrendingUp, Users } from 'lucide-react';
+import { AlertCircle, BookOpenCheck, GraduationCap, School, TrendingUp, Users, FileText } from 'lucide-react';
 import DataTable from '../../components/ui/DataTable.jsx';
 import EmptyState from '../../components/ui/EmptyState.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
@@ -84,12 +84,23 @@ export default function DashboardPage() {
       <section className="space-y-6">
         <PageHeader
           eyebrow="Dashboard Orang Tua"
-          title="Laporan Anak"
-          description="Lihat perkembangan nilai dan hafalan anak Anda."
+          title={`Selamat Datang, ${currentUser.nama}`}
+          description="Pantau perkembangan nilai dan hafalan anak Anda."
         />
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-6">
-          <p className="text-sm font-semibold text-emerald-900">Selamat datang, {currentUser.nama}!</p>
-          <p className="mt-2 text-sm text-emerald-800">Untuk melihat laporan lengkap anak Anda, silakan kunjungi menu <strong>Laporan Siswa</strong>.</p>
+        <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+              <GraduationCap className="h-6 w-6 text-emerald-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-base font-semibold text-emerald-900">Akses Laporan Anak</h3>
+              <p className="mt-1 text-sm text-emerald-800">Lihat laporan lengkap nilai akademik dan hafalan anak Anda di menu Laporan Siswa.</p>
+              <a href="/laporan-siswa" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
+                <FileText className="h-4 w-4" />
+                Buka Laporan Siswa
+              </a>
+            </div>
+          </div>
         </div>
       </section>
     );

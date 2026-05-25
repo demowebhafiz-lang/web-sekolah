@@ -156,6 +156,7 @@ export default function SiswaListPage() {
     { key: 'jenisKelamin', header: 'JK', render: (student) => <span className={student.status === 'nonaktif' ? 'text-slate-400' : ''}>{student.jenisKelamin || '-'}</span> },
     { key: 'kelasId', header: 'Kelas', render: (student) => <span className={student.status === 'nonaktif' ? 'text-slate-400' : ''}>{getKelasName(kelasRows, student.kelasId)}</span> },
     { key: 'namaOrangTua', header: 'Orang Tua', render: (student) => <span className={student.status === 'nonaktif' ? 'text-slate-400' : ''}>{student.namaOrangTua || '-'}</span> },
+    { key: 'akun', header: 'Akun', render: (student) => <span className={student.status === 'nonaktif' ? 'text-slate-400' : ''}>{student.userId ? '✓ Aktif' : '✗ Belum dibuat'}</span> },
     { key: 'status', header: 'Status', render: (student) => <StatusBadge status={student.status || 'aktif'} /> },
     {
       key: 'aksi',

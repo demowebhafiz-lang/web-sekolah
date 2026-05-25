@@ -103,6 +103,7 @@ export default function GuruListPage() {
     { key: 'email', header: 'Email', render: (row) => <span className={row.status === 'nonaktif' ? 'text-slate-400' : ''}>{row.email || '-'}</span> },
     { key: 'noHp', header: 'No HP', render: (row) => <span className={row.status === 'nonaktif' ? 'text-slate-400' : ''}>{row.noHp || '-'}</span> },
     { key: 'roleGuru', header: 'Role', render: (row) => <span className={row.status === 'nonaktif' ? 'text-slate-400 capitalize' : 'capitalize'}>{String(row.roleGuru || '-').replaceAll('_', ' ')}</span> },
+    { key: 'akun', header: 'Akun', render: (row) => <span className={row.status === 'nonaktif' ? 'text-slate-400' : ''}>{row.userId ? '✓ Aktif' : '✗ Belum dibuat'}</span> },
     { key: 'status', header: 'Status', render: (row) => <StatusBadge status={row.status || 'aktif'} /> },
     {
       key: 'aksi',

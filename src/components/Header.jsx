@@ -14,10 +14,10 @@ export default function Header({ onMenuClick }) {
   }
 
   return (
-    <header className="app-topbar sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
+    <header className="app-topbar sticky top-0 z-30 border-b border-slate-200/70 bg-white/80 shadow-sm shadow-slate-200/50 backdrop-blur-xl">
       <div className="flex min-h-20 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
-          <button className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition hover:bg-slate-50 lg:hidden" type="button" onClick={onMenuClick} aria-label="Buka menu">
+          <button className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 lg:hidden" type="button" onClick={onMenuClick} aria-label="Buka menu">
             <Menu className="h-5 w-5" />
           </button>
           <SchoolLogo className="hidden h-10 w-10 rounded-lg sm:grid" fallbackClassName="bg-emerald-50 text-emerald-700 ring-emerald-100" />
@@ -29,18 +29,18 @@ export default function Header({ onMenuClick }) {
         <div className="hidden min-w-0 flex-1 justify-center md:flex">
           <div className="relative w-full max-w-md">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100" placeholder="Cari siswa, kelas, atau laporan" />
+            <input className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/80 pl-9 pr-3 text-sm text-slate-700 shadow-inner shadow-slate-200/50 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100" placeholder="Cari siswa, kelas, atau laporan" />
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button className="hidden rounded-xl border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition hover:bg-slate-50 sm:inline-flex" type="button" aria-label="Notifikasi">
+          <button className="hidden rounded-xl border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700 sm:inline-flex" type="button" aria-label="Notifikasi">
             <Bell className="h-4 w-4" />
           </button>
           <div className="hidden text-right sm:block">
             <strong className="block text-sm font-semibold text-slate-950">{user?.nama || 'Pengguna'}</strong>
             <span className="text-xs capitalize text-slate-500">{formatRole(user?.role)}</span>
           </div>
-          <button className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" type="button" onClick={handleLogout}>
+          <button className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700" type="button" onClick={handleLogout}>
             <LogOut className="h-4 w-4" />
             <span className="hidden sm:inline">Logout</span>
           </button>

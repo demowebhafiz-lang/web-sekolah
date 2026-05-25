@@ -12,7 +12,7 @@ export default function SelectInput({
     <label className={`grid gap-1.5 text-sm font-semibold text-slate-700 ${className}`}>
       {label}
       <select
-        className={`h-10 rounded-lg border bg-white px-3 text-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${
+        className={`h-11 rounded-xl border bg-white px-3 text-sm shadow-inner shadow-slate-100/70 outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${
           error ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : 'border-slate-200 focus:border-emerald-400 focus:ring-emerald-100'
         }`}
         {...props}

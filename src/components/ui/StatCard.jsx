@@ -3,21 +3,22 @@ import { cn } from '../../lib/utils.js';
 
 export default function StatCard({ title, value, description, icon: Icon, tone = 'emerald', trend }) {
   const tones = {
-    emerald: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
-    amber: 'bg-amber-50 text-amber-700 ring-amber-100',
-    slate: 'bg-slate-100 text-slate-700 ring-slate-200',
-    rose: 'bg-rose-50 text-rose-700 ring-rose-100'
+    emerald: 'bg-emerald-50 text-emerald-700 ring-emerald-100 shadow-emerald-100',
+    amber: 'bg-amber-50 text-amber-700 ring-amber-100 shadow-amber-100',
+    slate: 'bg-slate-100 text-slate-700 ring-slate-200 shadow-slate-100',
+    rose: 'bg-rose-50 text-rose-700 ring-rose-100 shadow-rose-100'
   };
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <article className="group relative overflow-hidden rounded-2xl border border-white/70 bg-white/85 p-6 shadow-sm shadow-slate-200/70 ring-1 ring-slate-200/60 backdrop-blur transition duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-200/80">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-amber-300 to-sky-400 opacity-0 transition group-hover:opacity-100" />
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</p>
           <strong className="mt-2.5 block text-3xl font-bold tracking-tight text-slate-950">{value}</strong>
         </div>
         {Icon ? (
-          <span className={cn('grid h-12 w-12 place-items-center rounded-xl ring-1', tones[tone])}>
+          <span className={cn('grid h-12 w-12 place-items-center rounded-2xl shadow-sm ring-1 transition group-hover:scale-105', tones[tone])}>
             <Icon className="h-5 w-5" />
           </span>
         ) : null}
@@ -25,7 +26,7 @@ export default function StatCard({ title, value, description, icon: Icon, tone =
       <div className="mt-5 flex items-center justify-between gap-3 text-sm">
         <span className="text-slate-600">{description}</span>
         {trend ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
             <ArrowUpRight className="h-3.5 w-3.5" />
             {trend}
           </span>

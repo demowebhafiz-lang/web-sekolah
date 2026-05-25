@@ -14,7 +14,7 @@ const variants = {
 
 export default function StatusBadge({ status = 'aktif', children }) {
   return (
-    <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1', variants[status] || variants.nonaktif)}>
+    <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize shadow-sm ring-1', variants[status] || variants.nonaktif)}>
       {children || status.replaceAll('_', ' ')}
     </span>
   );

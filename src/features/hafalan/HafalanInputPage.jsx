@@ -1,5 +1,5 @@
 import { cloneElement, isValidElement, useEffect, useMemo, useState } from 'react';
-import { BookOpenCheck, CalendarDays, CheckCircle2, Loader2, Save, Sparkles, UserRound } from 'lucide-react';
+import { BookOpenCheck, BookOpen, CalendarDays, CheckCircle2, Loader2, Save, Sparkles, UserRound } from 'lucide-react';
 import AvatarImage from '../../components/AvatarImage.jsx';
 import EmptyState from '../../components/ui/EmptyState.jsx';
 import LoadingState from '../../components/ui/LoadingState.jsx';
@@ -11,6 +11,7 @@ import { cn } from '../../lib/utils.js';
 import { getKelasList } from '../kelas/kelasService.js';
 import { getSiswaList } from '../siswa/siswaService.js';
 import { createHafalan, getRiwayatHafalanSiswa } from './hafalanService.js';
+import { QURAN_SURAHS, getSurahByNumber, isValidVerseRange } from '../../data/quranData.js';
 
 const initialForm = {
   kelasId: '',
@@ -56,6 +57,12 @@ export default function HafalanInputPage() {
     () => siswaRows.find((student) => String(student.siswaId) === String(form.siswaId)) || null,
     [form.siswaId, siswaRows]
   );
+  
+  const selectedSurah = useMemo(
+    () => form.nomorSurah ? getSurahByNumber(form.nomorSurah) : null,
+    [form.nomorSurah]
+  );
+  
   const rataRata = useMemo(() => {
     const scores = [
       form.nilaiKelancaran,
@@ -137,6 +144,17 @@ export default function HafalanInputPage() {
       .finally(() => setIsLoadingHistory(false));
   }, [form.siswaId]);
 
+  // Auto-detect surah name when nomor surah changes
+  useEffect(() => {
+    if (form.nomorSurah && selectedSurah) {
+      setForm((current) => ({
+        ...current,
+        surah: selectedSurah.name,
+        juz: String(selectedSurah.juz)
+      }));
+    }
+  }, [form.nomorSurah, selectedSurah]);
+
   function handleChange(event) {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
@@ -163,6 +181,14 @@ export default function HafalanInputPage() {
 
     if (!isInRange(form.juz, 1, 30)) return 'Juz harus 1 sampai 30.';
     if (!isInRange(form.nomorSurah, 1, 114)) return 'Nomor surah harus 1 sampai 114.';
+    
+    // Validate verse range using surah data
+    if (selectedSurah) {
+      if (!isValidVerseRange(form.nomorSurah, form.ayatAwal, form.ayatAkhir)) {
+        return `Ayat tidak valid. ${selectedSurah.name} memiliki ${selectedSurah.verses} ayat.`;
+      }
+    }
+    
     if (Number(form.ayatAwal) > Number(form.ayatAkhir)) return 'Ayat awal tidak boleh lebih besar dari ayat akhir.';
 
     const scoreFields = [
@@ -283,24 +309,68 @@ export default function HafalanInputPage() {
             description="Isi rentang ayat dan status setoran."
           >
             <div className="grid gap-4 md:grid-cols-3">
-              <Field label="Juz">
-                <input name="juz" type="number" min="1" max="30" value={form.juz} onChange={handleChange} required />
+              <Field label="Nomor Surah">
+                <input name="nomorSurah" type="number" min="1" max="114" value={form.nomorSurah} onChange={handleChange} placeholder="1-114" required />
               </Field>
               <Field label="Surah">
-                <input name="surah" value={form.surah} onChange={handleChange} placeholder="An-Naba" required />
+                <input name="surah" value={form.surah} onChange={handleChange} placeholder="An-Naba" required disabled={!!selectedSurah} />
               </Field>
-              <Field label="Nomor Surah">
-                <input name="nomorSurah" type="number" min="1" max="114" value={form.nomorSurah} onChange={handleChange} required />
+              <Field label="Juz">
+                <input name="juz" type="number" min="1" max="30" value={form.juz} onChange={handleChange} required disabled={!!selectedSurah} />
               </Field>
+            </div>
+
+            {selectedSurah ? (
+              <div className="mt-4 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-4">
+                <div className="flex items-start gap-3">
+                  <span className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-100 text-emerald-700">
+                    <BookOpen className="h-5 w-5" />
+                  </span>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-bold text-emerald-900">{selectedSurah.name}</h3>
+                      <span className="text-lg font-semibold text-emerald-700">{selectedSurah.nameArabic}</span>
+                    </div>
+                    <p className="mt-1 text-sm text-emerald-800">
+                      Surah ke-{selectedSurah.number} · Juz {selectedSurah.juz} · {selectedSurah.verses} ayat
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="grid gap-4 md:grid-cols-3">
               <Field label="Ayat Awal">
-                <input name="ayatAwal" type="number" min="1" value={form.ayatAwal} onChange={handleChange} required />
+                <input name="ayatAwal" type="number" min="1" max={selectedSurah?.verses || 999} value={form.ayatAwal} onChange={handleChange} placeholder="1" required />
               </Field>
               <Field label="Ayat Akhir">
-                <input name="ayatAkhir" type="number" min="1" value={form.ayatAkhir} onChange={handleChange} required />
+                <input name="ayatAkhir" type="number" min="1" max={selectedSurah?.verses || 999} value={form.ayatAkhir} onChange={handleChange} placeholder={selectedSurah?.verses || ''} required />
               </Field>
               <Field label="Tanggal Setor">
                 <input name="tanggalSetor" type="date" value={form.tanggalSetor} onChange={handleChange} required />
               </Field>
+            </div>
+
+            {selectedSurah && form.ayatAwal && form.ayatAkhir ? (
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">Range Ayat yang Disetorkan</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {Number(form.ayatAkhir) - Number(form.ayatAwal) + 1} ayat dari {selectedSurah.verses} ayat
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-slate-950">{form.ayatAwal} - {form.ayatAkhir}</p>
+                    <p className="text-xs text-slate-500">
+                      {Math.round(((Number(form.ayatAkhir) - Number(form.ayatAwal) + 1) / selectedSurah.verses) * 100)}% dari surah
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="grid gap-4 md:grid-cols-3">
               <SelectInput label="Status Hafalan" name="statusHafalan" value={form.statusHafalan} onChange={handleChange}>
                 {statusOptions.map((option) => (
                   <option key={option.value} value={option.value}>

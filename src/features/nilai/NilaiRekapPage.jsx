@@ -25,6 +25,7 @@ const columns = [
   { key: 'no', header: 'No', render: (_row, index) => index + 1 },
   { key: 'nis', header: 'NIS', render: (row) => row.nis || '-' },
   { key: 'namaLengkap', header: 'Nama siswa', render: (row) => row.namaLengkap || '-' },
+  { key: 'namaKelas', header: 'Kelas', render: (row) => row.namaKelas || '-' },
   { key: 'namaMapel', header: 'Mapel', render: (row) => row.namaMapel || row.mapelId || '-' },
   { key: 'harian', header: 'Harian', render: (row) => formatNumber(row.harian) },
   { key: 'tugas', header: 'Tugas', render: (row) => formatNumber(row.tugas) },
@@ -104,13 +105,6 @@ export default function NilaiRekapPage() {
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!filters.kelasId) {
-      setError('Pilih kelas terlebih dahulu untuk menampilkan rekap nilai.');
-      setRows([]);
-      setHasSearched(true);
-      return;
-    }
-
     setError('');
     setIsLoading(true);
     setHasSearched(true);
@@ -161,7 +155,7 @@ export default function NilaiRekapPage() {
             <option value="Genap">Genap</option>
           </SelectInput>
           <SelectInput label="Kelas" name="kelasId" value={filters.kelasId} onChange={handleChange} disabled={isLoadingMaster}>
-            <option value="">{isLoadingMaster ? 'Memuat kelas...' : 'Pilih kelas'}</option>
+            <option value="">{isLoadingMaster ? 'Memuat kelas...' : 'Semua kelas'}</option>
             {kelasRows.map((kelas) => (
               <option key={kelas.kelasId} value={kelas.kelasId}>
                 {kelas.namaKelas || kelas.kelasId}
@@ -198,7 +192,7 @@ export default function NilaiRekapPage() {
         <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="text-base font-semibold text-slate-950">Tabel Rekap Nilai</h2>
-            <p className="text-sm text-slate-500">Jika siswa tidak dipilih, sistem menampilkan semua siswa di kelas terpilih.</p>
+            <p className="text-sm text-slate-500">Pilih "Semua kelas" untuk perbandingan antar kelas, atau pilih kelas tertentu untuk melihat detail per kelas.</p>
           </div>
           <span className="text-sm font-medium text-slate-500">{rows.length} data</span>
         </div>
@@ -206,7 +200,7 @@ export default function NilaiRekapPage() {
         {error ? (
           <ErrorState description={error} onRetry={() => handleSubmit({ preventDefault() {} })} />
         ) : !hasSearched ? (
-          <EmptyState title="Tentukan filter rekap" description="Pilih kelas lalu klik Tampilkan untuk memuat rekap nilai." />
+          <EmptyState title="Tentukan filter rekap" description="Klik Tampilkan untuk memuat rekap nilai. Pilih kelas untuk detail per kelas, atau biarkan kosong untuk semua kelas." />
         ) : (
           <DataTable
             columns={columns}
@@ -234,6 +228,14 @@ function Field({ label, children }) {
 function normalizeNilaiRows(items, { siswaRows, mapelRows, filters }) {
   const siswaMap = new Map(siswaRows.map((siswa) => [siswa.siswaId, siswa]));
   const mapelMap = new Map(mapelRows.map((mapel) => [mapel.mapelId, mapel]));
+  const kelasMap = new Map();
+  
+  siswaRows.forEach((siswa) => {
+    if (siswa.kelasId && siswa.namaKelas) {
+      kelasMap.set(siswa.kelasId, siswa.namaKelas);
+    }
+  });
+  
   const rows = [];
   const grouped = new Map();
 
@@ -249,6 +251,7 @@ function normalizeNilaiRows(items, { siswaRows, mapelRows, filters }) {
       mapelId,
       nis: item.nis || student.nis || '-',
       namaLengkap: item.namaLengkap || item.namaSiswa || student.namaLengkap || siswaId,
+      namaKelas: item.namaKelas || kelasMap.get(item.kelasId) || kelasMap.get(student.kelasId) || '-',
       namaMapel: item.namaMapel || subject.namaMapel || mapelId,
       harian: item.harian,
       tugas: item.tugas,

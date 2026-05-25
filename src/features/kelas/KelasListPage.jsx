@@ -9,6 +9,7 @@ import FormModal from '../../components/ui/FormModal.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
+import { getGuruList } from '../guru/guruService.js';
 import KelasFormPage from './KelasFormPage.jsx';
 import { deleteKelas, getKelasList } from './kelasService.js';
 
@@ -23,6 +24,7 @@ export default function KelasListPage() {
   const { showToast } = useToast();
   const [filters, setFilters] = useState(initialFilters);
   const [rows, setRows] = useState([]);
+  const [guruRows, setGuruRows] = useState([]);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -31,6 +33,7 @@ export default function KelasListPage() {
 
   useEffect(() => {
     loadRows(initialFilters);
+    loadGuruRows();
   }, []);
 
   useEffect(() => {
@@ -55,6 +58,15 @@ export default function KelasListPage() {
       setError(err.message || 'Gagal memuat data kelas.');
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function loadGuruRows() {
+    try {
+      const data = await getGuruList({ status: 'aktif', page: 1, limit: 200 });
+      setGuruRows(data.items || []);
+    } catch {
+      setGuruRows([]);
     }
   }
 
@@ -84,7 +96,7 @@ export default function KelasListPage() {
   const columns = [
     { key: 'namaKelas', header: 'Kelas', render: (row) => <strong className="text-slate-950">{row.namaKelas || '-'}</strong> },
     { key: 'tingkat', header: 'Tingkat', render: (row) => row.tingkat || '-' },
-    { key: 'waliKelasId', header: 'Wali Kelas ID', render: (row) => row.waliKelasId || '-' },
+    { key: 'waliKelasId', header: 'Wali Kelas', render: (row) => getGuruName(guruRows, row.waliKelasId) },
     { key: 'tahunAjaran', header: 'Tahun Ajaran', render: (row) => row.tahunAjaran || '-' },
     { key: 'status', header: 'Status', render: (row) => <StatusBadge status={row.status || 'aktif'} /> },
     {
@@ -153,6 +165,10 @@ export default function KelasListPage() {
       </FormModal>
     </section>
   );
+}
+
+function getGuruName(guruRows, guruId) {
+  return guruRows.find((guru) => String(guru.guruId) === String(guruId))?.namaGuru || '-';
 }
 
 function Field({ label, ...props }) {

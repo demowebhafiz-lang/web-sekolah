@@ -140,7 +140,6 @@ export default function SiswaListPage() {
           <button className="text-left font-semibold text-slate-950 hover:text-emerald-700" type="button" onClick={() => navigate(`/siswa/${student.siswaId}`, { state: { student } })}>
             {student.namaLengkap || '-'}
           </button>
-          <p className="text-xs text-slate-500">{student.siswaId}</p>
         </div>
       )
     },
@@ -271,7 +270,7 @@ export default function SiswaListPage() {
 }
 
 function getKelasName(kelasRows, kelasId) {
-  return kelasRows.find((kelas) => String(kelas.kelasId) === String(kelasId))?.namaKelas || kelasId || '-';
+  return kelasRows.find((kelas) => String(kelas.kelasId) === String(kelasId))?.namaKelas || '-';
 }
 
 function Field({ label, children }) {

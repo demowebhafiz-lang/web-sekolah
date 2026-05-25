@@ -4,7 +4,9 @@ import { Loader2 } from 'lucide-react';
 import ErrorState from '../../components/ui/ErrorState.jsx';
 import FormCard from '../../components/ui/FormCard.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
+import SelectInput from '../../components/ui/SelectInput.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
+import { getGuruList } from '../guru/guruService.js';
 import { createMapel, getMapelList, updateMapel } from './mapelService.js';
 
 const emptyForm = {
@@ -23,8 +25,11 @@ export default function MapelFormPage({ modalMode, initialMapel, onCancel, onSav
   const mode = modalMode || (params.mapelId ? 'edit' : 'create');
   const initialData = initialMapel || location.state?.mapel;
   const [form, setForm] = useState(() => ({ ...emptyForm, ...initialData, mapelId: initialData?.mapelId || params.mapelId || '' }));
+  const [guruRows, setGuruRows] = useState([]);
   const [error, setError] = useState('');
+  const [guruError, setGuruError] = useState('');
   const [isLoading, setIsLoading] = useState(mode === 'edit' && !location.state?.mapel);
+  const [isLoadingGuru, setIsLoadingGuru] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const title = useMemo(() => (mode === 'edit' ? 'Edit Mata Pelajaran' : 'Tambah Mata Pelajaran'), [mode]);
 
@@ -43,6 +48,20 @@ export default function MapelFormPage({ modalMode, initialMapel, onCancel, onSav
       .catch((err) => setError(err.message || 'Gagal memuat mata pelajaran.'))
       .finally(() => setIsLoading(false));
   }, [initialMapel, location.state, mode, params.mapelId]);
+
+  useEffect(() => {
+    setIsLoadingGuru(true);
+    getGuruList({ status: 'aktif', page: 1, limit: 200 })
+      .then((data) => {
+        setGuruRows(data.items || []);
+        setGuruError('');
+      })
+      .catch((err) => {
+        setGuruRows([]);
+        setGuruError(err.message || 'Gagal memuat data guru.');
+      })
+      .finally(() => setIsLoadingGuru(false));
+  }, []);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -87,22 +106,42 @@ export default function MapelFormPage({ modalMode, initialMapel, onCancel, onSav
     <section className="space-y-6">
       {!onSaved ? <PageHeader eyebrow="Data Master" title={title} description="Mapel digunakan pada input dan rekap nilai akademik." actions={<Link className="button button-secondary" to="/mapel">Kembali</Link>} /> : null}
       {error ? <ErrorState description={error} /> : null}
+      {guruError ? <ErrorState description={guruError} /> : null}
       <form className="space-y-5" onSubmit={handleSubmit}>
         <FormCard title="Informasi Mata Pelajaran" description="Kelompok membantu pemisahan mapel umum, agama, dan tahfidz.">
           <div className="grid gap-4 md:grid-cols-2">
-            {mode === 'edit' ? <Field label="Mapel ID" name="mapelId" value={form.mapelId} onChange={handleChange} required /> : null}
             <Field label="Nama Mapel" name="namaMapel" value={form.namaMapel} onChange={handleChange} required />
-            <SelectField label="Kelompok" name="kelompok" value={form.kelompok} onChange={handleChange}>
-              <option value="Umum">Umum</option>
-              <option value="Agama">Agama</option>
-              <option value="Tahfidz">Tahfidz</option>
-              <option value="Muatan Lokal">Muatan Lokal</option>
-            </SelectField>
-            <Field label="Guru ID" name="guruId" value={form.guruId} onChange={handleChange} placeholder="GR002" />
-            <SelectField label="Status" name="status" value={form.status} onChange={handleChange}>
-              <option value="aktif">Aktif</option>
-              <option value="nonaktif">Nonaktif</option>
-            </SelectField>
+            <SelectInput
+              label="Kategori"
+              name="kelompok"
+              value={form.kelompok}
+              onChange={handleChange}
+              options={[
+                { value: 'Umum', label: 'Umum' },
+                { value: 'Agama', label: 'Agama' },
+                { value: 'Tahfidz', label: 'Tahfidz' },
+                { value: 'Muatan Lokal', label: 'Muatan Lokal' }
+              ]}
+            />
+            <SelectInput
+              label="Guru Pengampu"
+              name="guruId"
+              value={form.guruId}
+              onChange={handleChange}
+              disabled={isLoadingGuru}
+              placeholder={isLoadingGuru ? 'Memuat guru...' : 'Pilih guru pengampu'}
+              options={guruRows.map((guru) => ({ value: guru.guruId, label: guru.namaGuru || guru.email || 'Tanpa nama guru' }))}
+            />
+            <SelectInput
+              label="Status"
+              name="status"
+              value={form.status}
+              onChange={handleChange}
+              options={[
+                { value: 'aktif', label: 'Aktif' },
+                { value: 'nonaktif', label: 'Nonaktif' }
+              ]}
+            />
           </div>
         </FormCard>
         <Actions isSaving={isSaving} onCancel={onCancel} />
@@ -113,10 +152,6 @@ export default function MapelFormPage({ modalMode, initialMapel, onCancel, onSav
 
 function Field({ label, ...props }) {
   return <label className="grid gap-1.5 text-sm font-semibold text-slate-700">{label}<input className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" {...props} /></label>;
-}
-
-function SelectField({ label, children, ...props }) {
-  return <label className="grid gap-1.5 text-sm font-semibold text-slate-700">{label}<select className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" {...props}>{children}</select></label>;
 }
 
 function Actions({ isSaving, onCancel }) {

@@ -191,7 +191,6 @@ export default function SiswaFormPage({ modalMode, initialStudent, kelasRows: in
 
         <FormCard title="Identitas Siswa" description="Data dasar siswa untuk pencarian dan laporan.">
           <div className="grid gap-4 md:grid-cols-2">
-            {mode === 'edit' ? <Field label="Siswa ID" name="siswaId" value={form.siswaId} onChange={handleChange} required /> : null}
             <Field className="md:col-span-2" label="Nama Lengkap" name="namaLengkap" value={form.namaLengkap} onChange={handleChange} required />
             <Field label="NIS" name="nis" value={form.nis} onChange={handleChange} required />
             <Field label="NISN" name="nisn" value={form.nisn} onChange={handleChange} />
@@ -221,8 +220,7 @@ export default function SiswaFormPage({ modalMode, initialStudent, kelasRows: in
               required
               disabled={isLoadingKelas}
               placeholder={isLoadingKelas ? 'Memuat kelas...' : 'Pilih kelas'}
-              helperText="Value yang disimpan adalah kelasId."
-              options={kelasRows.map((kelas) => ({ value: kelas.kelasId, label: kelas.namaKelas || kelas.kelasId }))}
+              options={kelasRows.map((kelas) => ({ value: kelas.kelasId, label: kelas.namaKelas || 'Tanpa nama kelas' }))}
             />
             <SelectInput
               label="Status Siswa"

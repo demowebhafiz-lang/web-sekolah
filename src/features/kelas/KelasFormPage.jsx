@@ -4,7 +4,9 @@ import { Loader2 } from 'lucide-react';
 import ErrorState from '../../components/ui/ErrorState.jsx';
 import FormCard from '../../components/ui/FormCard.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
+import SelectInput from '../../components/ui/SelectInput.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
+import { getGuruList } from '../guru/guruService.js';
 import { createKelas, getKelasList, updateKelas } from './kelasService.js';
 
 const emptyForm = {
@@ -24,8 +26,11 @@ export default function KelasFormPage({ modalMode, initialKelas, onCancel, onSav
   const mode = modalMode || (params.kelasId ? 'edit' : 'create');
   const initialData = initialKelas || location.state?.kelas;
   const [form, setForm] = useState(() => ({ ...emptyForm, ...initialData, kelasId: initialData?.kelasId || params.kelasId || '' }));
+  const [guruRows, setGuruRows] = useState([]);
   const [error, setError] = useState('');
+  const [guruError, setGuruError] = useState('');
   const [isLoading, setIsLoading] = useState(mode === 'edit' && !location.state?.kelas);
+  const [isLoadingGuru, setIsLoadingGuru] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const title = useMemo(() => (mode === 'edit' ? 'Edit Kelas' : 'Tambah Kelas'), [mode]);
 
@@ -44,6 +49,20 @@ export default function KelasFormPage({ modalMode, initialKelas, onCancel, onSav
       .catch((err) => setError(err.message || 'Gagal memuat data kelas.'))
       .finally(() => setIsLoading(false));
   }, [initialKelas, location.state, mode, params.kelasId]);
+
+  useEffect(() => {
+    setIsLoadingGuru(true);
+    getGuruList({ status: 'aktif', page: 1, limit: 200 })
+      .then((data) => {
+        setGuruRows(data.items || []);
+        setGuruError('');
+      })
+      .catch((err) => {
+        setGuruRows([]);
+        setGuruError(err.message || 'Gagal memuat data guru.');
+      })
+      .finally(() => setIsLoadingGuru(false));
+  }, []);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -89,18 +108,32 @@ export default function KelasFormPage({ modalMode, initialKelas, onCancel, onSav
     <section className="space-y-6">
       {!onSaved ? <PageHeader eyebrow="Data Master" title={title} description="Isi struktur kelas sesuai Sheet Kelas." actions={<Link className="button button-secondary" to="/kelas">Kembali</Link>} /> : null}
       {error ? <ErrorState description={error} /> : null}
+      {guruError ? <ErrorState description={guruError} /> : null}
       <form className="space-y-5" onSubmit={handleSubmit}>
         <FormCard title="Informasi Kelas" description="Kelas terhubung ke siswa, nilai, dan hafalan.">
           <div className="grid gap-4 md:grid-cols-2">
-            {mode === 'edit' ? <Field label="Kelas ID" name="kelasId" value={form.kelasId} onChange={handleChange} required /> : null}
             <Field label="Nama Kelas" name="namaKelas" value={form.namaKelas} onChange={handleChange} placeholder="1A" required />
             <Field label="Tingkat" name="tingkat" value={form.tingkat} onChange={handleChange} placeholder="1" required />
-            <Field label="Wali Kelas ID" name="waliKelasId" value={form.waliKelasId} onChange={handleChange} placeholder="GR001" />
+            <SelectInput
+              label="Wali Kelas"
+              name="waliKelasId"
+              value={form.waliKelasId}
+              onChange={handleChange}
+              disabled={isLoadingGuru}
+              placeholder={isLoadingGuru ? 'Memuat guru...' : 'Pilih wali kelas'}
+              options={guruRows.map((guru) => ({ value: guru.guruId, label: guru.namaGuru || guru.email || 'Tanpa nama guru' }))}
+            />
             <Field label="Tahun Ajaran" name="tahunAjaran" value={form.tahunAjaran} onChange={handleChange} required />
-            <SelectField label="Status" name="status" value={form.status} onChange={handleChange}>
-              <option value="aktif">Aktif</option>
-              <option value="nonaktif">Nonaktif</option>
-            </SelectField>
+            <SelectInput
+              label="Status"
+              name="status"
+              value={form.status}
+              onChange={handleChange}
+              options={[
+                { value: 'aktif', label: 'Aktif' },
+                { value: 'nonaktif', label: 'Nonaktif' }
+              ]}
+            />
           </div>
         </FormCard>
         <Actions isSaving={isSaving} backTo="/kelas" onCancel={onCancel} />
@@ -111,10 +144,6 @@ export default function KelasFormPage({ modalMode, initialKelas, onCancel, onSav
 
 function Field({ label, ...props }) {
   return <label className="grid gap-1.5 text-sm font-semibold text-slate-700">{label}<input className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" {...props} /></label>;
-}
-
-function SelectField({ label, children, ...props }) {
-  return <label className="grid gap-1.5 text-sm font-semibold text-slate-700">{label}<select className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" {...props}>{children}</select></label>;
 }
 
 function Actions({ isSaving, backTo, onCancel }) {

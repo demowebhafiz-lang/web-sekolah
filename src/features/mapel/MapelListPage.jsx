@@ -9,6 +9,7 @@ import FormModal from '../../components/ui/FormModal.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
+import { getGuruList } from '../guru/guruService.js';
 import MapelFormPage from './MapelFormPage.jsx';
 import { deleteMapel, getMapelList } from './mapelService.js';
 
@@ -23,6 +24,7 @@ export default function MapelListPage() {
   const { showToast } = useToast();
   const [filters, setFilters] = useState(initialFilters);
   const [rows, setRows] = useState([]);
+  const [guruRows, setGuruRows] = useState([]);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -31,6 +33,7 @@ export default function MapelListPage() {
 
   useEffect(() => {
     loadRows(initialFilters);
+    loadGuruRows();
   }, []);
 
   useEffect(() => {
@@ -62,6 +65,15 @@ export default function MapelListPage() {
     }
   }
 
+  async function loadGuruRows() {
+    try {
+      const data = await getGuruList({ status: 'aktif', page: 1, limit: 200 });
+      setGuruRows(data.items || []);
+    } catch {
+      setGuruRows([]);
+    }
+  }
+
   function handleFilterChange(event) {
     const { name, value } = event.target;
     setFilters((current) => ({ ...current, [name]: value }));
@@ -87,8 +99,8 @@ export default function MapelListPage() {
 
   const columns = [
     { key: 'namaMapel', header: 'Mata Pelajaran', render: (row) => <strong className="text-slate-950">{row.namaMapel || '-'}</strong> },
-    { key: 'kelompok', header: 'Kelompok', render: (row) => row.kelompok || '-' },
-    { key: 'guruId', header: 'Guru ID', render: (row) => row.guruId || '-' },
+    { key: 'guruId', header: 'Guru Pengampu', render: (row) => getGuruName(guruRows, row.guruId) },
+    { key: 'kelompok', header: 'Kategori', render: (row) => row.kelompok || '-' },
     { key: 'status', header: 'Status', render: (row) => <StatusBadge status={row.status || 'aktif'} /> },
     {
       key: 'aksi',
@@ -155,6 +167,10 @@ export default function MapelListPage() {
       </FormModal>
     </section>
   );
+}
+
+function getGuruName(guruRows, guruId) {
+  return guruRows.find((guru) => String(guru.guruId) === String(guruId))?.namaGuru || '-';
 }
 
 function Field({ label, ...props }) {

@@ -25,6 +25,22 @@ export function deleteSiswaPhoto(siswaId) {
   return gasRequest('deleteSiswaPhoto', { siswaId }, getSessionToken());
 }
 
+export function createParentAccountForSiswa(payload) {
+  return gasRequest('createParentAccountForSiswa', normalizeParentAccountPayload(payload), getSessionToken());
+}
+
+export function resetParentPassword(payload) {
+  return gasRequest('resetParentPassword', { siswaId: payload.siswaId, newPassword: payload.newPassword }, getSessionToken());
+}
+
+export function updateParentLoginStatus(payload) {
+  return gasRequest('updateParentLoginStatus', { siswaId: payload.siswaId, status: payload.status }, getSessionToken());
+}
+
+export function getParentLoginInfo(siswaId) {
+  return gasRequest('getParentLoginInfo', { siswaId }, getSessionToken());
+}
+
 function normalizeFilters(filters) {
   return Object.fromEntries(
     Object.entries(filters)
@@ -51,7 +67,19 @@ function normalizeSiswaPayload(payload) {
     alamat: clean(payload.alamat),
     status: payload.status,
     fotoFileId: clean(payload.fotoFileId) || undefined,
-    fotoUrl: clean(payload.fotoUrl) || undefined
+    fotoUrl: clean(payload.fotoUrl) || undefined,
+    createParentAccount: payload.createParentAccount || false,
+    parentAccount: payload.parentAccount ? normalizeParentAccountPayload(payload.parentAccount) : undefined
+  };
+}
+
+function normalizeParentAccountPayload(payload) {
+  return {
+    siswaId: clean(payload.siswaId),
+    nama: clean(payload.nama),
+    email: clean(payload.email),
+    password: clean(payload.password),
+    status: payload.status || 'aktif'
   };
 }
 

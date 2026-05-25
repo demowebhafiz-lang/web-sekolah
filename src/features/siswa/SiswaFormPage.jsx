@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ImageUp, Loader2, Trash2 } from 'lucide-react';
+import { ImageUp, Loader2, Trash2, Eye, EyeOff, RefreshCw, UserPlus } from 'lucide-react';
 import AvatarImage from '../../components/AvatarImage.jsx';
 import ErrorState from '../../components/ui/ErrorState.jsx';
 import FormCard from '../../components/ui/FormCard.jsx';
@@ -9,7 +9,7 @@ import SelectInput from '../../components/ui/SelectInput.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { fileToBase64Payload, IMAGE_ACCEPT, IMAGE_MAX_BYTES, validateImageFile } from '../../utils/fileUpload.js';
 import { getKelasList } from '../kelas/kelasService.js';
-import { createSiswa, deleteSiswaPhoto, getSiswaList, updateSiswa, uploadSiswaPhoto } from './siswaService.js';
+import { createSiswa, deleteSiswaPhoto, getSiswaList, updateSiswa, uploadSiswaPhoto, getParentLoginInfo, createParentAccountForSiswa, resetParentPassword } from './siswaService.js';
 
 const emptyForm = {
   siswaId: '',
@@ -52,6 +52,10 @@ export default function SiswaFormPage({ modalMode, initialStudent, kelasRows: in
   const [isLoading, setIsLoading] = useState(mode === 'edit' && !location.state?.student);
   const [isLoadingKelas, setIsLoadingKelas] = useState(!(initialKelasRows || []).length);
   const [isSaving, setIsSaving] = useState(false);
+  const [createParentAccount, setCreateParentAccount] = useState(false);
+  const [parentAccount, setParentAccount] = useState({ nama: '', email: '', password: '', status: 'aktif' });
+  const [parentLoginInfo, setParentLoginInfo] = useState(null);
+  const [showParentPassword, setShowParentPassword] = useState(false);
 
   const title = useMemo(() => (mode === 'edit' ? 'Edit Siswa' : 'Tambah Siswa'), [mode]);
 
@@ -98,9 +102,32 @@ export default function SiswaFormPage({ modalMode, initialStudent, kelasRows: in
       .finally(() => setIsLoadingKelas(false));
   }, [initialKelasRows]);
 
+  useEffect(() => {
+    if (mode !== 'edit' || !form.siswaId) return;
+
+    getParentLoginInfo(form.siswaId)
+      .then((data) => {
+        setParentLoginInfo(data.hasAccount ? data : null);
+      })
+      .catch(() => {
+        setParentLoginInfo(null);
+      });
+  }, [mode, form.siswaId]);
+
   function handleChange(event) {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function handleParentAccountChange(event) {
+    const { name, value } = event.target;
+    setParentAccount((current) => ({ ...current, [name]: value }));
+  }
+
+  function generateParentPassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    const password = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    setParentAccount((current) => ({ ...current, password }));
   }
 
   function handlePhotoChange(event) {
@@ -126,6 +153,32 @@ export default function SiswaFormPage({ modalMode, initialStudent, kelasRows: in
     }
   }
 
+  async function handleCreateParentAccount() {
+    if (!form.siswaId) return;
+
+    try {
+      await createParentAccountForSiswa({ ...parentAccount, siswaId: form.siswaId });
+      const info = await getParentLoginInfo(form.siswaId);
+      setParentLoginInfo(info.hasAccount ? info : null);
+      setParentAccount({ nama: '', email: '', password: '', status: 'aktif' });
+      showToast({ title: 'Akun orang tua dibuat', description: 'Akun login berhasil dibuat.', variant: 'success' });
+    } catch (err) {
+      showToast({ title: 'Gagal membuat akun', description: err.message || 'Request gagal.', variant: 'error' });
+    }
+  }
+
+  async function handleResetParentPassword() {
+    if (!form.siswaId || !parentAccount.password) return;
+
+    try {
+      await resetParentPassword({ siswaId: form.siswaId, newPassword: parentAccount.password });
+      setParentAccount({ nama: '', email: '', password: '', status: 'aktif' });
+      showToast({ title: 'Password direset', description: 'Password orang tua berhasil direset.', variant: 'success' });
+    } catch (err) {
+      showToast({ title: 'Gagal reset password', description: err.message || 'Request gagal.', variant: 'error' });
+    }
+  }
+
   function validate() {
     if (!form.nis.trim()) return 'NIS wajib diisi.';
     if (!form.namaLengkap.trim()) return 'Nama lengkap wajib diisi.';
@@ -148,7 +201,13 @@ export default function SiswaFormPage({ modalMode, initialStudent, kelasRows: in
     setError('');
 
     try {
-      const result = mode === 'edit' ? await updateSiswa(form) : await createSiswa(form);
+      const payload = { ...form };
+      if (mode === 'create' && createParentAccount) {
+        payload.createParentAccount = true;
+        payload.parentAccount = parentAccount;
+      }
+
+      const result = mode === 'edit' ? await updateSiswa(payload) : await createSiswa(payload);
       const siswaId = form.siswaId || result?.siswaId || result?.item?.siswaId;
 
       if (photoFile && siswaId) {
@@ -246,6 +305,102 @@ export default function SiswaFormPage({ modalMode, initialStudent, kelasRows: in
             <Field label="Nama Orang Tua/Wali Utama" name="namaOrangTua" value={form.namaOrangTua} onChange={handleChange} />
             <Field label="Nomor HP Wali" name="noHpOrangTua" value={form.noHpOrangTua} onChange={handleChange} />
           </div>
+        </FormCard>
+
+        <FormCard title="Akun Orang Tua / Wali" description="Akun login untuk orang tua/wali melihat laporan siswa.">
+          {mode === 'create' ? (
+            <div className="space-y-4">
+              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <input type="checkbox" checked={createParentAccount} onChange={(e) => setCreateParentAccount(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-2 focus:ring-emerald-100" />
+                Buat akun login orang tua saat menyimpan siswa
+              </label>
+              {createParentAccount ? (
+                <div className="grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
+                  <Field className="md:col-span-2" label="Nama Lengkap" name="nama" value={parentAccount.nama} onChange={handleParentAccountChange} required={createParentAccount} />
+                  <Field className="md:col-span-2" label="Email" name="email" type="email" value={parentAccount.email} onChange={handleParentAccountChange} required={createParentAccount} />
+                  <div className="md:col-span-2">
+                    <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
+                      Password
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <input type={showParentPassword ? 'text' : 'password'} name="password" value={parentAccount.password} onChange={handleParentAccountChange} required={createParentAccount} className="h-10 w-full rounded-lg border border-slate-200 px-3 pr-10 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" />
+                          <button type="button" onClick={() => setShowParentPassword(!showParentPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            {showParentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                        <button type="button" onClick={generateParentPassword} className="button button-secondary gap-2">
+                          <RefreshCw className="h-4 w-4" />
+                          Generate
+                        </button>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {mode === 'edit' ? (
+            <div className="space-y-4">
+              {parentLoginInfo ? (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-sm font-semibold text-emerald-900">✓ Akun orang tua sudah dibuat</p>
+                  <div className="mt-3 grid gap-2 text-sm text-emerald-800">
+                    <p><span className="font-semibold">Nama:</span> {parentLoginInfo.nama}</p>
+                    <p><span className="font-semibold">Email:</span> {parentLoginInfo.email}</p>
+                    <p><span className="font-semibold">Status:</span> {parentLoginInfo.status}</p>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    <label className="grid gap-1.5 text-sm font-semibold text-emerald-900">
+                      Password Baru (untuk reset)
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <input type={showParentPassword ? 'text' : 'password'} name="password" value={parentAccount.password} onChange={handleParentAccountChange} className="h-10 w-full rounded-lg border border-emerald-300 bg-white px-3 pr-10 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" />
+                          <button type="button" onClick={() => setShowParentPassword(!showParentPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-emerald-600 hover:text-emerald-800">
+                            {showParentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                        <button type="button" onClick={generateParentPassword} className="button border-emerald-300 bg-white text-emerald-700 hover:bg-emerald-50">
+                          <RefreshCw className="h-4 w-4" />
+                        </button>
+                        <button type="button" onClick={handleResetParentPassword} disabled={!parentAccount.password} className="button border-emerald-300 bg-white text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
+                          Reset Password
+                        </button>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm text-slate-600">Belum ada akun login untuk orang tua siswa ini.</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field className="md:col-span-2" label="Nama Lengkap" name="nama" value={parentAccount.nama} onChange={handleParentAccountChange} />
+                    <Field className="md:col-span-2" label="Email" name="email" type="email" value={parentAccount.email} onChange={handleParentAccountChange} />
+                    <div className="md:col-span-2">
+                      <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
+                        Password
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <input type={showParentPassword ? 'text' : 'password'} name="password" value={parentAccount.password} onChange={handleParentAccountChange} className="h-10 w-full rounded-lg border border-slate-200 px-3 pr-10 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" />
+                            <button type="button" onClick={() => setShowParentPassword(!showParentPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                              {showParentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
+                          <button type="button" onClick={generateParentPassword} className="button button-secondary gap-2">
+                            <RefreshCw className="h-4 w-4" />
+                            Generate
+                          </button>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                  <button type="button" onClick={handleCreateParentAccount} disabled={!parentAccount.nama || !parentAccount.email || !parentAccount.password} className="button button-primary gap-2 disabled:opacity-50">
+                    <UserPlus className="h-4 w-4" />
+                    Buat Akun Orang Tua
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : null}
         </FormCard>
 
         <FormCard title="Alamat dan Foto" description="Foto disimpan ke Google Drive, bukan ke Sheet.">

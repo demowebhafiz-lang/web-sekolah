@@ -18,6 +18,9 @@ import EmptyState from '../../components/ui/EmptyState.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
 import StatCard from '../../components/ui/StatCard.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
+import { getCurrentUser } from '../auth/authService.js';
+import { ROLES } from '../auth/roles.js';
+import { useState, useEffect } from 'react';
 
 const stats = [
   { title: 'Siswa Aktif', value: '250', description: '12 kelas aktif', icon: Users, tone: 'emerald', trend: '+8' },
@@ -69,6 +72,29 @@ const columns = [
 ];
 
 export default function DashboardPage() {
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    setCurrentUser(user);
+  }, []);
+
+  if (currentUser?.role === ROLES.ORANG_TUA) {
+    return (
+      <section className="space-y-6">
+        <PageHeader
+          eyebrow="Dashboard Orang Tua"
+          title="Laporan Anak"
+          description="Lihat perkembangan nilai dan hafalan anak Anda."
+        />
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-6">
+          <p className="text-sm font-semibold text-emerald-900">Selamat datang, {currentUser.nama}!</p>
+          <p className="mt-2 text-sm text-emerald-800">Untuk melihat laporan lengkap anak Anda, silakan kunjungi menu <strong>Laporan Siswa</strong>.</p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-6">
       <PageHeader

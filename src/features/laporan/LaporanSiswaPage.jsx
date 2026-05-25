@@ -14,6 +14,8 @@ import { getRekapHafalan } from '../hafalan/hafalanService.js';
 import { getRekapNilai } from '../nilai/nilaiService.js';
 import { getAppSettings } from '../settings/settingsService.js';
 import { getSiswaList } from '../siswa/siswaService.js';
+import { getCurrentUser } from '../auth/authService.js';
+import { ROLES } from '../auth/roles.js';
 
 const initialFilters = {
   tahunAjaran: '2026/2027',
@@ -25,6 +27,7 @@ const initialFilters = {
 
 export default function LaporanSiswaPage() {
   const { showToast } = useToast();
+  const [currentUser, setCurrentUser] = useState(null);
   const [filters, setFilters] = useState(initialFilters);
   const [kelasRows, setKelasRows] = useState([]);
   const [siswaRows, setSiswaRows] = useState([]);
@@ -47,6 +50,15 @@ export default function LaporanSiswaPage() {
   );
 
   useEffect(() => {
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    
+    if (user?.role === ROLES.ORANG_TUA && user?.siswaId) {
+      setFilters((current) => ({ ...current, siswaId: user.siswaId, reportType: 'single' }));
+    }
+  }, []);
+
+  useEffect(() => {
     setIsLoadingKelas(true);
     getKelasList({ status: 'aktif', page: 1, limit: 200 })
       .then((data) => {
@@ -66,14 +78,18 @@ export default function LaporanSiswaPage() {
       setSiswaRows([]);
       setReports([]);
       setSiswaError('');
-      setFilters((current) => ({ ...current, siswaId: '' }));
+      if (currentUser?.role !== ROLES.ORANG_TUA) {
+        setFilters((current) => ({ ...current, siswaId: '' }));
+      }
       return;
     }
 
     setIsLoadingSiswa(true);
     setSiswaError('');
     setReports([]);
-    setFilters((current) => ({ ...current, siswaId: '' }));
+    if (currentUser?.role !== ROLES.ORANG_TUA) {
+      setFilters((current) => ({ ...current, siswaId: '' }));
+    }
 
     getSiswaList({ kelasId: filters.kelasId, status: 'aktif', page: 1, limit: 200 })
       .then((data) => setSiswaRows(data.items || []))
@@ -174,10 +190,11 @@ export default function LaporanSiswaPage() {
       <PageHeader
         eyebrow="Laporan"
         title="Laporan Siswa"
-        description="Pilih kelas dan siswa untuk laporan tunggal, atau cetak massal semua siswa dalam satu kelas."
+        description={currentUser?.role === ROLES.ORANG_TUA ? "Lihat laporan nilai dan hafalan anak Anda." : "Pilih kelas dan siswa untuk laporan tunggal, atau cetak massal semua siswa dalam satu kelas."}
       />
 
-      <form className="report-filter no-print rounded-xl border border-slate-200 bg-white p-4 shadow-sm" onSubmit={handleSubmit}>
+      {currentUser?.role !== ROLES.ORANG_TUA ? (
+        <form className="report-filter no-print rounded-xl border border-slate-200 bg-white p-4 shadow-sm" onSubmit={handleSubmit}>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <Field label="Tahun Ajaran">
             <input className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" name="tahunAjaran" value={filters.tahunAjaran} onChange={handleFilterChange} placeholder="2026/2027" />
@@ -225,6 +242,7 @@ export default function LaporanSiswaPage() {
           </button>
         </div>
       </form>
+      ) : null}
 
       {kelasError ? <InlineAlert tone="warning" message={kelasError} /> : null}
       {siswaError ? <InlineAlert tone="error" message={siswaError} /> : null}

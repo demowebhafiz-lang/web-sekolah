@@ -42,3 +42,7 @@ export function getStoredUser() {
 export function isAuthenticated() {
   return Boolean(getSessionToken() && getStoredUser());
 }
+
+export function getCurrentUser() {
+  return getStoredUser();
+}

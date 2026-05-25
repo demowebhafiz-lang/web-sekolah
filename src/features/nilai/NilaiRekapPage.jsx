@@ -8,6 +8,8 @@ import PageHeader from '../../components/ui/PageHeader.jsx';
 import PredikatBadge, { getPredikat } from '../../components/ui/PredikatBadge.jsx';
 import SelectInput from '../../components/ui/SelectInput.jsx';
 import StatCard from '../../components/ui/StatCard.jsx';
+import { getCurrentUser } from '../auth/authService.js';
+import { ROLES } from '../auth/roles.js';
 import { getKelasList } from '../kelas/kelasService.js';
 import { getMapelList } from '../mapel/mapelService.js';
 import { getSiswaList } from '../siswa/siswaService.js';
@@ -40,6 +42,7 @@ const columns = [
 ];
 
 export default function NilaiRekapPage() {
+  const [currentUser, setCurrentUser] = useState(null);
   const [filters, setFilters] = useState(initialFilters);
   const [kelasRows, setKelasRows] = useState([]);
   const [siswaRows, setSiswaRows] = useState([]);
@@ -50,6 +53,16 @@ export default function NilaiRekapPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMaster, setIsLoadingMaster] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+
+  const canViewAllClasses = useMemo(() => {
+    if (!currentUser) return false;
+    return [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.KEPALA_SEKOLAH].includes(currentUser.role);
+  }, [currentUser]);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    setCurrentUser(user);
+  }, []);
 
   useEffect(() => {
     setIsLoadingMaster(true);
@@ -105,6 +118,13 @@ export default function NilaiRekapPage() {
   async function handleSubmit(event) {
     event.preventDefault();
 
+    if (!canViewAllClasses && !filters.kelasId) {
+      setError('Pilih kelas terlebih dahulu untuk menampilkan rekap nilai.');
+      setRows([]);
+      setHasSearched(true);
+      return;
+    }
+
     setError('');
     setIsLoading(true);
     setHasSearched(true);
@@ -155,7 +175,8 @@ export default function NilaiRekapPage() {
             <option value="Genap">Genap</option>
           </SelectInput>
           <SelectInput label="Kelas" name="kelasId" value={filters.kelasId} onChange={handleChange} disabled={isLoadingMaster}>
-            <option value="">{isLoadingMaster ? 'Memuat kelas...' : 'Semua kelas'}</option>
+            {canViewAllClasses && <option value="">{isLoadingMaster ? 'Memuat kelas...' : 'Semua kelas'}</option>}
+            {!canViewAllClasses && <option value="">{isLoadingMaster ? 'Memuat kelas...' : 'Pilih kelas'}</option>}
             {kelasRows.map((kelas) => (
               <option key={kelas.kelasId} value={kelas.kelasId}>
                 {kelas.namaKelas || kelas.kelasId}
@@ -192,7 +213,11 @@ export default function NilaiRekapPage() {
         <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="text-base font-semibold text-slate-950">Tabel Rekap Nilai</h2>
-            <p className="text-sm text-slate-500">Pilih "Semua kelas" untuk perbandingan antar kelas, atau pilih kelas tertentu untuk melihat detail per kelas.</p>
+            <p className="text-sm text-slate-500">
+              {canViewAllClasses 
+                ? 'Pilih "Semua kelas" untuk perbandingan antar kelas, atau pilih kelas tertentu untuk melihat detail per kelas.'
+                : 'Pilih kelas dan siswa untuk melihat rekap nilai.'}
+            </p>
           </div>
           <span className="text-sm font-medium text-slate-500">{rows.length} data</span>
         </div>
@@ -200,7 +225,12 @@ export default function NilaiRekapPage() {
         {error ? (
           <ErrorState description={error} onRetry={() => handleSubmit({ preventDefault() {} })} />
         ) : !hasSearched ? (
-          <EmptyState title="Tentukan filter rekap" description="Klik Tampilkan untuk memuat rekap nilai. Pilih kelas untuk detail per kelas, atau biarkan kosong untuk semua kelas." />
+          <EmptyState 
+            title="Tentukan filter rekap" 
+            description={canViewAllClasses 
+              ? 'Klik Tampilkan untuk memuat rekap nilai. Pilih kelas untuk detail per kelas, atau biarkan kosong untuk semua kelas.'
+              : 'Pilih kelas lalu klik Tampilkan untuk memuat rekap nilai.'} 
+          />
         ) : (
           <DataTable
             columns={columns}

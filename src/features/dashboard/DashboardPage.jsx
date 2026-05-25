@@ -87,15 +87,15 @@ export default function DashboardPage() {
           title={`Selamat Datang, ${currentUser.nama}`}
           description="Pantau perkembangan nilai dan hafalan anak Anda."
         />
-        <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-              <GraduationCap className="h-6 w-6 text-emerald-600" />
+        <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-8 shadow-sm">
+          <div className="flex items-start gap-5">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+              <GraduationCap className="h-7 w-7 text-emerald-600" />
             </div>
             <div className="flex-1">
-              <h3 className="text-base font-semibold text-emerald-900">Akses Laporan Anak</h3>
-              <p className="mt-1 text-sm text-emerald-800">Lihat laporan lengkap nilai akademik dan hafalan anak Anda di menu Laporan Siswa.</p>
-              <a href="/laporan-siswa" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
+              <h3 className="text-lg font-bold text-emerald-900">Akses Laporan Anak</h3>
+              <p className="mt-2 text-sm leading-relaxed text-emerald-800">Lihat laporan lengkap nilai akademik dan hafalan anak Anda di menu Laporan Siswa.</p>
+              <a href="/laporan-siswa" className="mt-5 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:bg-emerald-800">
                 <FileText className="h-4 w-4" />
                 Buka Laporan Siswa
               </a>
@@ -120,18 +120,18 @@ export default function DashboardPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((item) => (
           <StatCard key={item.title} {...item} />
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1.4fr_0.9fr]">
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-5 flex items-center justify-between gap-3">
+      <div className="grid gap-5 xl:grid-cols-[1.4fr_0.9fr]">
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-slate-950">Tren Rata-rata Nilai</h2>
-              <p className="text-sm text-slate-500">Data dummy untuk tampilan dashboard awal.</p>
+              <h2 className="text-base font-bold text-slate-950">Tren Rata-rata Nilai</h2>
+              <p className="mt-1 text-sm text-slate-600">Data dummy untuk tampilan dashboard awal.</p>
             </div>
             <GraduationCap className="h-5 w-5 text-emerald-600" />
           </div>
@@ -154,10 +154,10 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-5">
-            <h2 className="text-base font-semibold text-slate-950">Status Hafalan</h2>
-            <p className="text-sm text-slate-500">Komposisi status setoran.</p>
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-6">
+            <h2 className="text-base font-bold text-slate-950">Status Hafalan</h2>
+            <p className="mt-1 text-sm text-slate-600">Komposisi status setoran.</p>
           </div>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -202,11 +202,11 @@ export default function DashboardPage() {
         </section>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-5">
-            <h2 className="text-base font-semibold text-slate-950">Setoran per Kelas</h2>
-            <p className="text-sm text-slate-500">Perbandingan jumlah setoran bulan ini.</p>
+      <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-6">
+            <h2 className="text-base font-bold text-slate-950">Setoran per Kelas</h2>
+            <p className="mt-1 text-sm text-slate-600">Perbandingan jumlah setoran bulan ini.</p>
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -221,11 +221,11 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-5 flex items-center justify-between gap-3">
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-slate-950">Siswa Perlu Perhatian</h2>
-              <p className="text-sm text-slate-500">Daftar prioritas wali kelas dan guru.</p>
+              <h2 className="text-base font-bold text-slate-950">Siswa Perlu Perhatian</h2>
+              <p className="mt-1 text-sm text-slate-600">Daftar prioritas wali kelas dan guru.</p>
             </div>
             <StatusBadge status="perlu_perbaikan">3 siswa</StatusBadge>
           </div>

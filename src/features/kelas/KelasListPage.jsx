@@ -11,11 +11,11 @@ import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { getGuruList } from '../guru/guruService.js';
 import KelasFormPage from './KelasFormPage.jsx';
-import { deleteKelas, getKelasList } from './kelasService.js';
+import { deleteKelas, getKelasList, updateKelas } from './kelasService.js';
 
 const initialFilters = {
   tahunAjaran: '2026/2027',
-  status: 'aktif',
+  status: '',
   keyword: ''
 };
 
@@ -87,6 +87,16 @@ export default function KelasListPage() {
     }
   }
 
+  async function handleRestore(kelas) {
+    try {
+      await updateKelas({ kelasId: kelas.kelasId, status: 'aktif' });
+      showToast({ title: 'Kelas diaktifkan', description: `${kelas.namaKelas} berhasil diaktifkan kembali.`, variant: 'success' });
+      await loadRows(filters);
+    } catch (err) {
+      showToast({ title: 'Gagal mengaktifkan kelas', description: err.message || 'Request gagal.', variant: 'error' });
+    }
+  }
+
   async function handleSaved(message) {
     setFormModal(null);
     showToast({ title: 'Data kelas', description: message, variant: 'success' });
@@ -94,18 +104,24 @@ export default function KelasListPage() {
   }
 
   const columns = [
-    { key: 'namaKelas', header: 'Kelas', render: (row) => <strong className="text-slate-950">{row.namaKelas || '-'}</strong> },
-    { key: 'tingkat', header: 'Tingkat', render: (row) => row.tingkat || '-' },
-    { key: 'waliKelasId', header: 'Wali Kelas', render: (row) => getGuruName(guruRows, row.waliKelasId) },
-    { key: 'tahunAjaran', header: 'Tahun Ajaran', render: (row) => row.tahunAjaran || '-' },
+    { key: 'namaKelas', header: 'Kelas', render: (row) => <strong className={row.status === 'nonaktif' ? 'text-slate-400 line-through' : 'text-slate-950'}>{row.namaKelas || '-'}</strong> },
+    { key: 'tingkat', header: 'Tingkat', render: (row) => <span className={row.status === 'nonaktif' ? 'text-slate-400' : ''}>{row.tingkat || '-'}</span> },
+    { key: 'waliKelasId', header: 'Wali Kelas', render: (row) => <span className={row.status === 'nonaktif' ? 'text-slate-400' : ''}>{getGuruName(guruRows, row.waliKelasId)}</span> },
+    { key: 'tahunAjaran', header: 'Tahun Ajaran', render: (row) => <span className={row.status === 'nonaktif' ? 'text-slate-400' : ''}>{row.tahunAjaran || '-'}</span> },
     { key: 'status', header: 'Status', render: (row) => <StatusBadge status={row.status || 'aktif'} /> },
     {
       key: 'aksi',
       header: 'Aksi',
       render: (row) => (
         <div className="flex gap-2">
-          <button className="text-button" type="button" onClick={() => setFormModal({ mode: 'edit', item: row })}>Edit</button>
-          <button className="text-button danger" type="button" onClick={() => setDeleteTarget(row)}>Nonaktifkan</button>
+          {row.status === 'nonaktif' ? (
+            <button className="text-button" type="button" onClick={() => handleRestore(row)}>Aktifkan</button>
+          ) : (
+            <>
+              <button className="text-button" type="button" onClick={() => setFormModal({ mode: 'edit', item: row })}>Edit</button>
+              <button className="text-button danger" type="button" onClick={() => setDeleteTarget(row)}>Nonaktifkan</button>
+            </>
+          )}
         </div>
       )
     }
@@ -143,7 +159,7 @@ export default function KelasListPage() {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Nonaktifkan kelas?"
-        description={`Kelas ${deleteTarget?.namaKelas || ''} akan diubah menjadi nonaktif.`}
+        description={`Kelas ${deleteTarget?.namaKelas || ''} akan dinonaktifkan (tidak dihapus permanen). Data siswa, nilai, dan hafalan di kelas ini tetap tersimpan. Anda bisa mengaktifkan kembali dari filter "Nonaktif".`}
         confirmLabel="Nonaktifkan"
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDelete}

@@ -153,9 +153,9 @@ export default function SettingsPage() {
       {error ? <ErrorState description={error} onRetry={loadSettings} /> : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(280px,360px)_1fr]">
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-semibold text-slate-700">Preview Identitas</p>
-          <div className="mt-5 grid place-items-center rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8">
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Preview Identitas</p>
+          <div className="mt-6 grid place-items-center rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8">
             {activeLogoUrl ? (
               <span className="grid h-28 w-28 place-items-center overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
                 <img alt="Preview logo sekolah" className="h-full w-full object-contain p-2" src={activeLogoUrl} />
@@ -164,20 +164,20 @@ export default function SettingsPage() {
               <SchoolLogo className="h-24 w-24 rounded-2xl" fallbackClassName="bg-emerald-100 text-emerald-700" />
             )}
           </div>
-          <div className="mt-5 space-y-2 text-center">
-            <h2 className="text-lg font-semibold text-slate-950">{form.schoolName || 'Nama sekolah belum diatur'}</h2>
-            <p className="text-sm leading-6 text-slate-500">{form.schoolAddress || 'Alamat sekolah belum diatur'}</p>
+          <div className="mt-6 space-y-2 text-center">
+            <h2 className="text-lg font-bold text-slate-950">{form.schoolName || 'Nama sekolah belum diatur'}</h2>
+            <p className="text-sm leading-relaxed text-slate-600">{form.schoolAddress || 'Alamat sekolah belum diatur'}</p>
           </div>
         </section>
 
         <div className="space-y-6">
-          <form className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" onSubmit={handleSaveSettings}>
-            <div className="mb-5">
-              <h2 className="text-base font-semibold text-slate-950">Data Sekolah</h2>
-              <p className="mt-1 text-sm text-slate-500">Nama dan alamat ini dipakai sebagai identitas resmi pada laporan cetak.</p>
+          <form className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" onSubmit={handleSaveSettings}>
+            <div className="mb-6">
+              <h2 className="text-base font-bold text-slate-950">Data Sekolah</h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-slate-600">Nama dan alamat ini dipakai sebagai identitas resmi pada laporan cetak.</p>
             </div>
 
-            <div className="grid gap-4">
+            <div className="grid gap-5">
               <Field label="Nama Sekolah" icon={Building2}>
                 <input className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" name="schoolName" value={form.schoolName} onChange={handleChange} placeholder="Nama sekolah" />
               </Field>
@@ -186,7 +186,7 @@ export default function SettingsPage() {
               </Field>
             </div>
 
-            <div className="mt-5 flex justify-end">
+            <div className="mt-6 flex justify-end">
               <button className="button button-primary gap-2" type="submit" disabled={isSaving}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 {isSaving ? 'Menyimpan...' : 'Simpan Pengaturan'}
@@ -194,10 +194,10 @@ export default function SettingsPage() {
             </div>
           </form>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-5">
-              <h2 className="text-base font-semibold text-slate-950">Logo Sekolah</h2>
-              <p className="mt-1 text-sm text-slate-500">Logo dipakai di login, navigasi aplikasi, dan header laporan cetak.</p>
+          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mb-6">
+              <h2 className="text-base font-bold text-slate-950">Logo Sekolah</h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-slate-600">Logo dipakai di login, navigasi aplikasi, dan header laporan cetak.</p>
             </div>
 
             <label className="grid gap-2 text-sm font-semibold text-slate-700">

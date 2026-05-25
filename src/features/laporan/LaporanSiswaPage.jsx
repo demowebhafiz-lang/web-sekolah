@@ -201,7 +201,7 @@ export default function LaporanSiswaPage() {
 
       {currentUser?.role !== ROLES.ORANG_TUA ? (
         <form className="report-filter no-print rounded-xl border border-slate-200 bg-white p-4 shadow-sm" onSubmit={handleSubmit}>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <Field label="Tahun Ajaran">
             <input className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" name="tahunAjaran" value={filters.tahunAjaran} onChange={handleFilterChange} placeholder="2026/2027" />
           </Field>
@@ -228,8 +228,8 @@ export default function LaporanSiswaPage() {
             ))}
           </SelectInput>
           <SelectInput label="Jenis Laporan" name="reportType" value={filters.reportType} onChange={handleFilterChange}>
-            <option value="single">Laporan Per Siswa</option>
-            <option value="class">Laporan Per Kelas / Cetak Massal</option>
+            <option value="single">Per Siswa</option>
+            <option value="class">Per Kelas (Massal)</option>
           </SelectInput>
         </div>
 

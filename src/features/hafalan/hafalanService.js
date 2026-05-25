@@ -13,6 +13,10 @@ export function getRekapHafalan(filters = {}) {
   return gasRequest('getRekapHafalan', normalizeFilters(filters), getSessionToken());
 }
 
+export function updateHafalan(payload) {
+  return gasRequest('updateHafalan', normalizeUpdateHafalanPayload(payload), getSessionToken());
+}
+
 function normalizeHafalanPayload(payload) {
   const user = getStoredUser();
 
@@ -20,6 +24,27 @@ function normalizeHafalanPayload(payload) {
     siswaId: clean(payload.siswaId),
     kelasId: clean(payload.kelasId),
     guruTahfidzId: clean(payload.guruTahfidzId || user?.guruId),
+    juz: Number(payload.juz),
+    surah: clean(payload.surah),
+    nomorSurah: Number(payload.nomorSurah),
+    ayatAwal: Number(payload.ayatAwal),
+    ayatAkhir: Number(payload.ayatAkhir),
+    tanggalSetor: payload.tanggalSetor,
+    statusHafalan: payload.statusHafalan,
+    nilaiKelancaran: Number(payload.nilaiKelancaran),
+    nilaiTajwid: Number(payload.nilaiTajwid),
+    nilaiMakhraj: Number(payload.nilaiMakhraj),
+    nilaiAdab: Number(payload.nilaiAdab),
+    catatan: clean(payload.catatan)
+  };
+}
+
+function normalizeUpdateHafalanPayload(payload) {
+  return {
+    hafalanId: clean(payload.hafalanId),
+    siswaId: clean(payload.siswaId),
+    kelasId: clean(payload.kelasId),
+    guruTahfidzId: clean(payload.guruTahfidzId),
     juz: Number(payload.juz),
     surah: clean(payload.surah),
     nomorSurah: Number(payload.nomorSurah),

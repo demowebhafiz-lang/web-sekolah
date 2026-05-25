@@ -1,19 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, Printer, TrendingDown, TrendingUp, Users } from 'lucide-react';
+import { BarChart3, Edit3, Loader2, Printer, Save, TrendingDown, TrendingUp, Users } from 'lucide-react';
 import DataTable from '../../components/ui/DataTable.jsx';
 import EmptyState from '../../components/ui/EmptyState.jsx';
 import ErrorState from '../../components/ui/ErrorState.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
+import FormModal from '../../components/ui/FormModal.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
 import PredikatBadge, { getPredikat } from '../../components/ui/PredikatBadge.jsx';
 import SelectInput from '../../components/ui/SelectInput.jsx';
 import StatCard from '../../components/ui/StatCard.jsx';
+import { useToast } from '../../components/ui/Toast.jsx';
 import { getCurrentUser } from '../auth/authService.js';
 import { ROLES } from '../auth/roles.js';
 import { getKelasList } from '../kelas/kelasService.js';
 import { getMapelList } from '../mapel/mapelService.js';
 import { getSiswaList } from '../siswa/siswaService.js';
-import { getRekapNilai } from './nilaiService.js';
+import { getRekapNilai, updateNilai } from './nilaiService.js';
 
 const initialFilters = {
   tahunAjaran: '2026/2027',
@@ -23,25 +25,8 @@ const initialFilters = {
   mapelId: ''
 };
 
-const columns = [
-  { key: 'no', header: 'No', render: (_row, index) => index + 1 },
-  { key: 'nis', header: 'NIS', render: (row) => row.nis || '-' },
-  { key: 'namaLengkap', header: 'Nama siswa', render: (row) => row.namaLengkap || '-' },
-  { key: 'namaKelas', header: 'Kelas', render: (row) => row.namaKelas || '-' },
-  { key: 'namaMapel', header: 'Mapel', render: (row) => row.namaMapel || row.mapelId || '-' },
-  { key: 'harian', header: 'Harian', render: (row) => formatNumber(row.harian) },
-  { key: 'tugas', header: 'Tugas', render: (row) => formatNumber(row.tugas) },
-  { key: 'pts', header: 'PTS', render: (row) => formatNumber(row.pts) },
-  { key: 'pas', header: 'PAS', render: (row) => formatNumber(row.pas) },
-  { key: 'rataRata', header: 'Rata-rata', render: (row) => formatNumber(row.rataRata) },
-  {
-    key: 'predikat',
-    header: 'Predikat',
-    render: (row) => <PredikatBadge value={row.predikat || getPredikat(row.rataRata)} />
-  }
-];
-
 export default function NilaiRekapPage() {
+  const { showToast } = useToast();
   const [currentUser, setCurrentUser] = useState(null);
   const [filters, setFilters] = useState(initialFilters);
   const [kelasRows, setKelasRows] = useState([]);
@@ -53,10 +38,17 @@ export default function NilaiRekapPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMaster, setIsLoadingMaster] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [editDraft, setEditDraft] = useState({});
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const canViewAllClasses = useMemo(() => {
     if (!currentUser) return false;
     return [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.KEPALA_SEKOLAH].includes(currentUser.role);
+  }, [currentUser]);
+  const canEditNilai = useMemo(() => {
+    if (!currentUser) return false;
+    return [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.GURU_MAPEL].includes(currentUser.role);
   }, [currentUser]);
 
   useEffect(() => {
@@ -148,6 +140,92 @@ export default function NilaiRekapPage() {
   function handlePrint() {
     window.print();
   }
+
+  function handleOpenEdit(row) {
+    const draft = {};
+    ['harian', 'tugas', 'pts', 'pas'].forEach((jenis) => {
+      const record = row.records?.[jenis];
+      if (record?.nilaiId) {
+        draft[jenis] = {
+          nilaiId: record.nilaiId,
+          nilai: record.nilai ?? '',
+          catatan: record.catatan || ''
+        };
+      }
+    });
+
+    setEditTarget(row);
+    setEditDraft(draft);
+  }
+
+  function handleEditChange(jenis, field, value) {
+    setEditDraft((current) => ({
+      ...current,
+      [jenis]: {
+        ...current[jenis],
+        [field]: value
+      }
+    }));
+  }
+
+  async function handleSaveEdit(event) {
+    event.preventDefault();
+
+    const entries = Object.entries(editDraft).filter(([, value]) => value?.nilaiId);
+    const invalid = entries.find(([, value]) => !isValidScore(value.nilai));
+
+    if (!entries.length) {
+      showToast({ title: 'Tidak ada nilai', description: 'Baris ini belum memiliki nilai yang bisa diedit.', variant: 'error' });
+      return;
+    }
+
+    if (invalid) {
+      showToast({ title: 'Nilai tidak valid', description: 'Nilai harus angka 0 sampai 100.', variant: 'error' });
+      return;
+    }
+
+    setIsSavingEdit(true);
+
+    try {
+      await Promise.all(entries.map(([, value]) => updateNilai(value)));
+      showToast({ title: 'Nilai diperbarui', description: `${editTarget?.namaLengkap || 'Data nilai'} berhasil diperbarui.`, variant: 'success' });
+      setEditTarget(null);
+      setEditDraft({});
+      await handleSubmit({ preventDefault() {} });
+    } catch (err) {
+      showToast({ title: 'Gagal memperbarui nilai', description: err.message || 'Request gagal.', variant: 'error' });
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }
+
+  const columns = [
+    { key: 'no', header: 'No', render: (_row, index) => index + 1 },
+    { key: 'nis', header: 'NIS', render: (row) => row.nis || '-' },
+    { key: 'namaLengkap', header: 'Nama siswa', render: (row) => row.namaLengkap || '-' },
+    { key: 'namaKelas', header: 'Kelas', render: (row) => row.namaKelas || '-' },
+    { key: 'namaMapel', header: 'Mapel', render: (row) => row.namaMapel || row.mapelId || '-' },
+    { key: 'harian', header: 'Harian', render: (row) => formatNumber(row.harian) },
+    { key: 'tugas', header: 'Tugas', render: (row) => formatNumber(row.tugas) },
+    { key: 'pts', header: 'PTS', render: (row) => formatNumber(row.pts) },
+    { key: 'pas', header: 'PAS', render: (row) => formatNumber(row.pas) },
+    { key: 'rataRata', header: 'Rata-rata', render: (row) => formatNumber(row.rataRata) },
+    {
+      key: 'predikat',
+      header: 'Predikat',
+      render: (row) => <PredikatBadge value={row.predikat || getPredikat(row.rataRata)} />
+    },
+    ...(canEditNilai ? [{
+      key: 'aksi',
+      header: 'Aksi',
+      render: (row) => (
+        <button className="text-button inline-flex items-center gap-1" type="button" onClick={() => handleOpenEdit(row)} disabled={!hasEditableNilai(row)}>
+          <Edit3 className="h-3.5 w-3.5" />
+          Edit
+        </button>
+      )
+    }] : [])
+  ];
 
   return (
     <section className="space-y-6">
@@ -242,7 +320,78 @@ export default function NilaiRekapPage() {
           />
         )}
       </section>
+
+      <FormModal
+        open={Boolean(editTarget)}
+        title="Edit Nilai"
+        description="Perbarui nilai yang sudah tersimpan. Nilai kosong belum bisa diedit dari rekap."
+        onClose={() => setEditTarget(null)}
+      >
+        <form className="space-y-5" onSubmit={handleSaveEdit}>
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <p className="font-semibold text-slate-950">{editTarget?.namaLengkap || '-'}</p>
+            <p className="mt-1 text-sm text-slate-500">{editTarget?.namaKelas || '-'} · {editTarget?.namaMapel || '-'}</p>
+          </div>
+
+          <div className="grid gap-4">
+            {['harian', 'tugas', 'pts', 'pas'].map((jenis) => (
+              <NilaiEditField
+                key={jenis}
+                jenis={jenis}
+                draft={editDraft[jenis]}
+                onChange={handleEditChange}
+              />
+            ))}
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <button className="button button-secondary" type="button" onClick={() => setEditTarget(null)}>
+              Batal
+            </button>
+            <button className="button button-primary gap-2" type="submit" disabled={isSavingEdit}>
+              {isSavingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Simpan Perubahan
+            </button>
+          </div>
+        </form>
+      </FormModal>
     </section>
+  );
+}
+
+function NilaiEditField({ jenis, draft, onChange }) {
+  const label = { harian: 'Harian', tugas: 'Tugas', pts: 'PTS', pas: 'PAS' }[jenis];
+
+  return (
+    <fieldset className="rounded-xl border border-slate-200 bg-white p-4 disabled:opacity-60" disabled={!draft?.nilaiId}>
+      <legend className="px-1 text-sm font-semibold text-slate-700">{label}</legend>
+      {draft?.nilaiId ? (
+        <div className="grid gap-3 md:grid-cols-[140px_1fr]">
+          <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
+            Nilai
+            <input
+              className="h-11 rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+              type="number"
+              min="0"
+              max="100"
+              value={draft.nilai}
+              onChange={(event) => onChange(jenis, 'nilai', event.target.value)}
+            />
+          </label>
+          <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
+            Catatan
+            <input
+              className="h-11 rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+              value={draft.catatan}
+              onChange={(event) => onChange(jenis, 'catatan', event.target.value)}
+              placeholder="Opsional"
+            />
+          </label>
+        </div>
+      ) : (
+        <p className="text-sm text-slate-500">Belum ada nilai {label.toLowerCase()} yang tersimpan.</p>
+      )}
+    </fieldset>
   );
 }
 
@@ -288,10 +437,14 @@ function normalizeNilaiRows(items, { siswaRows, mapelRows, filters }) {
       pts: item.pts || item.PTS,
       pas: item.pas || item.PAS,
       rataRata: item.rataRata || item.rata || item.nilaiAkhir,
-      predikat: item.predikat
+      predikat: item.predikat,
+      records: {}
     };
 
     const jenis = String(item.jenisNilai || '').toLowerCase();
+    if (['harian', 'tugas', 'pts', 'pas'].includes(jenis)) {
+      current.records[jenis] = item;
+    }
     if (jenis === 'harian') current.harian = item.nilai;
     if (jenis === 'tugas') current.tugas = item.nilai;
     if (jenis === 'pts') current.pts = item.nilai;
@@ -321,4 +474,13 @@ function normalizeNilaiRows(items, { siswaRows, mapelRows, filters }) {
 function formatNumber(value) {
   const number = Number(value);
   return Number.isNaN(number) ? '-' : number.toFixed(1);
+}
+
+function isValidScore(value) {
+  const number = Number(value);
+  return value !== '' && !Number.isNaN(number) && number >= 0 && number <= 100;
+}
+
+function hasEditableNilai(row) {
+  return Object.values(row.records || {}).some((record) => record?.nilaiId);
 }

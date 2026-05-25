@@ -9,6 +9,10 @@ export function getRekapNilai(filters = {}) {
   return gasRequest('getRekapNilai', cleanObject(filters), getSessionToken());
 }
 
+export function updateNilai(payload) {
+  return gasRequest('updateNilai', normalizeUpdateNilaiPayload(payload), getSessionToken());
+}
+
 function normalizeNilaiPayload(payload) {
   const user = getStoredUser();
 
@@ -24,6 +28,17 @@ function normalizeNilaiPayload(payload) {
       nilai: Number(item.nilai),
       catatan: clean(item.catatan)
     }))
+  };
+}
+
+function normalizeUpdateNilaiPayload(payload) {
+  const user = getStoredUser();
+
+  return {
+    nilaiId: clean(payload.nilaiId),
+    guruId: clean(payload.guruId || user?.guruId),
+    nilai: Number(payload.nilai),
+    catatan: clean(payload.catatan)
   };
 }
 

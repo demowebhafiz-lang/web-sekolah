@@ -10,22 +10,22 @@ export default function StatCard({ title, value, description, icon: Icon, tone =
   };
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft">
+    <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-slate-500">{title}</p>
-          <strong className="mt-2 block text-3xl font-semibold tracking-tight text-slate-950">{value}</strong>
+        <div className="flex-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</p>
+          <strong className="mt-2.5 block text-3xl font-bold tracking-tight text-slate-950">{value}</strong>
         </div>
         {Icon ? (
-          <span className={cn('grid h-11 w-11 place-items-center rounded-lg ring-1', tones[tone])}>
+          <span className={cn('grid h-12 w-12 place-items-center rounded-xl ring-1', tones[tone])}>
             <Icon className="h-5 w-5" />
           </span>
         ) : null}
       </div>
-      <div className="mt-4 flex items-center justify-between gap-3 text-sm">
-        <span className="text-slate-500">{description}</span>
+      <div className="mt-5 flex items-center justify-between gap-3 text-sm">
+        <span className="text-slate-600">{description}</span>
         {trend ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 font-medium text-emerald-700">
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
             <ArrowUpRight className="h-3.5 w-3.5" />
             {trend}
           </span>

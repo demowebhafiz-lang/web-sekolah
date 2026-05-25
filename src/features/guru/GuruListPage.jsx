@@ -10,11 +10,11 @@ import PageHeader from '../../components/ui/PageHeader.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
 import GuruFormPage from './GuruFormPage.jsx';
-import { deleteGuru, getGuruList } from './guruService.js';
+import { deleteGuru, getGuruList, updateGuru } from './guruService.js';
 
 const initialFilters = {
   roleGuru: '',
-  status: 'aktif',
+  status: '',
   keyword: ''
 };
 
@@ -82,6 +82,16 @@ export default function GuruListPage() {
     }
   }
 
+  async function handleRestore(guru) {
+    try {
+      await updateGuru({ guruId: guru.guruId, status: 'aktif' });
+      showToast({ title: 'Guru diaktifkan', description: `${guru.namaGuru} berhasil diaktifkan kembali.`, variant: 'success' });
+      await loadRows(filters);
+    } catch (err) {
+      showToast({ title: 'Gagal mengaktifkan guru', description: err.message || 'Request gagal.', variant: 'error' });
+    }
+  }
+
   async function handleSaved(message) {
     setFormModal(null);
     showToast({ title: 'Data guru', description: message, variant: 'success' });
@@ -89,18 +99,24 @@ export default function GuruListPage() {
   }
 
   const columns = [
-    { key: 'namaGuru', header: 'Nama Guru', render: (row) => <strong className="text-slate-950">{row.namaGuru || '-'}</strong> },
-    { key: 'email', header: 'Email', render: (row) => row.email || '-' },
-    { key: 'noHp', header: 'No HP', render: (row) => row.noHp || '-' },
-    { key: 'roleGuru', header: 'Role', render: (row) => <span className="capitalize">{String(row.roleGuru || '-').replaceAll('_', ' ')}</span> },
+    { key: 'namaGuru', header: 'Nama Guru', render: (row) => <strong className={row.status === 'nonaktif' ? 'text-slate-400 line-through' : 'text-slate-950'}>{row.namaGuru || '-'}</strong> },
+    { key: 'email', header: 'Email', render: (row) => <span className={row.status === 'nonaktif' ? 'text-slate-400' : ''}>{row.email || '-'}</span> },
+    { key: 'noHp', header: 'No HP', render: (row) => <span className={row.status === 'nonaktif' ? 'text-slate-400' : ''}>{row.noHp || '-'}</span> },
+    { key: 'roleGuru', header: 'Role', render: (row) => <span className={row.status === 'nonaktif' ? 'text-slate-400 capitalize' : 'capitalize'}>{String(row.roleGuru || '-').replaceAll('_', ' ')}</span> },
     { key: 'status', header: 'Status', render: (row) => <StatusBadge status={row.status || 'aktif'} /> },
     {
       key: 'aksi',
       header: 'Aksi',
       render: (row) => (
         <div className="flex gap-2">
-          <button className="text-button" type="button" onClick={() => setFormModal({ mode: 'edit', item: row })}>Edit</button>
-          <button className="text-button danger" type="button" onClick={() => setDeleteTarget(row)}>Nonaktifkan</button>
+          {row.status === 'nonaktif' ? (
+            <button className="text-button" type="button" onClick={() => handleRestore(row)}>Aktifkan</button>
+          ) : (
+            <>
+              <button className="text-button" type="button" onClick={() => setFormModal({ mode: 'edit', item: row })}>Edit</button>
+              <button className="text-button danger" type="button" onClick={() => setDeleteTarget(row)}>Nonaktifkan</button>
+            </>
+          )}
         </div>
       )
     }
@@ -141,7 +157,7 @@ export default function GuruListPage() {
         <DataTable columns={columns} rows={rows} keyField="guruId" loading={isLoading} emptyTitle="Belum ada data guru" />
       </section>
 
-      <ConfirmDialog open={Boolean(deleteTarget)} title="Nonaktifkan guru?" description={`Guru ${deleteTarget?.namaGuru || ''} akan diubah menjadi nonaktif.`} confirmLabel="Nonaktifkan" onCancel={() => setDeleteTarget(null)} onConfirm={handleDelete} />
+      <ConfirmDialog open={Boolean(deleteTarget)} title="Nonaktifkan guru?" description={`Guru ${deleteTarget?.namaGuru || ''} akan dinonaktifkan (tidak dihapus permanen). Data terkait tetap tersimpan. Anda bisa mengaktifkan kembali dari filter "Nonaktif".`} confirmLabel="Nonaktifkan" onCancel={() => setDeleteTarget(null)} onConfirm={handleDelete} />
 
       <FormModal
         open={Boolean(formModal)}

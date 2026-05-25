@@ -15,11 +15,11 @@ import { getStoredUser } from '../auth/authService.js';
 import { ADMIN_ROLES, canAccess } from '../auth/roles.js';
 import { getKelasList } from '../kelas/kelasService.js';
 import SiswaFormPage from './SiswaFormPage.jsx';
-import { deleteSiswa, getSiswaList } from './siswaService.js';
+import { deleteSiswa, getSiswaList, updateSiswa } from './siswaService.js';
 
 const initialFilters = {
   kelasId: '',
-  status: 'aktif',
+  status: '',
   jenisKelamin: '',
   keyword: ''
 };
@@ -119,6 +119,16 @@ export default function SiswaListPage() {
     }
   }
 
+  async function handleRestore(siswa) {
+    try {
+      await updateSiswa({ siswaId: siswa.siswaId, status: 'aktif' });
+      showToast({ title: 'Siswa diaktifkan', description: `${siswa.namaLengkap} berhasil diaktifkan kembali.`, variant: 'success' });
+      await loadStudents(filters);
+    } catch (err) {
+      showToast({ title: 'Gagal mengaktifkan siswa', description: err.message || 'Request gagal.', variant: 'error' });
+    }
+  }
+
   async function handleSaved(message) {
     setFormModal(null);
     showToast({ title: 'Data siswa', description: message, variant: 'success' });
@@ -131,34 +141,40 @@ export default function SiswaListPage() {
       header: 'Foto',
       render: (student) => <AvatarImage className="h-10 w-10" name={student.namaLengkap} src={student.fotoUrl} />
     },
-    { key: 'nis', header: 'NIS', render: (student) => student.nis || '-' },
+    { key: 'nis', header: 'NIS', render: (student) => <span className={student.status === 'nonaktif' ? 'text-slate-400' : ''}>{student.nis || '-'}</span> },
     {
       key: 'namaLengkap',
       header: 'Nama',
       render: (student) => (
         <div>
-          <button className="text-left font-semibold text-slate-950 hover:text-emerald-700" type="button" onClick={() => navigate(`/siswa/${student.siswaId}`, { state: { student } })}>
+          <button className={student.status === 'nonaktif' ? 'text-left font-semibold text-slate-400 line-through hover:text-slate-500' : 'text-left font-semibold text-slate-950 hover:text-emerald-700'} type="button" onClick={() => navigate(`/siswa/${student.siswaId}`, { state: { student } })}>
             {student.namaLengkap || '-'}
           </button>
         </div>
       )
     },
-    { key: 'jenisKelamin', header: 'JK', render: (student) => student.jenisKelamin || '-' },
-    { key: 'kelasId', header: 'Kelas', render: (student) => getKelasName(kelasRows, student.kelasId) },
-    { key: 'namaOrangTua', header: 'Orang Tua', render: (student) => student.namaOrangTua || '-' },
+    { key: 'jenisKelamin', header: 'JK', render: (student) => <span className={student.status === 'nonaktif' ? 'text-slate-400' : ''}>{student.jenisKelamin || '-'}</span> },
+    { key: 'kelasId', header: 'Kelas', render: (student) => <span className={student.status === 'nonaktif' ? 'text-slate-400' : ''}>{getKelasName(kelasRows, student.kelasId)}</span> },
+    { key: 'namaOrangTua', header: 'Orang Tua', render: (student) => <span className={student.status === 'nonaktif' ? 'text-slate-400' : ''}>{student.namaOrangTua || '-'}</span> },
     { key: 'status', header: 'Status', render: (student) => <StatusBadge status={student.status || 'aktif'} /> },
     {
       key: 'aksi',
       header: 'Aksi',
       render: (student) => (
         <div className="flex flex-wrap gap-2">
-          <button className="text-button" type="button" onClick={() => navigate(`/siswa/${student.siswaId}`, { state: { student } })}>Detail</button>
-          {canManage ? (
+          {student.status === 'nonaktif' ? (
+            <button className="text-button" type="button" onClick={() => handleRestore(student)}>Aktifkan</button>
+          ) : (
             <>
-              <button className="text-button" type="button" onClick={() => setFormModal({ mode: 'edit', item: student })}>Edit</button>
-              <button className="text-button danger" type="button" onClick={() => setDeleteTarget(student)}>Nonaktifkan</button>
+              <button className="text-button" type="button" onClick={() => navigate(`/siswa/${student.siswaId}`, { state: { student } })}>Detail</button>
+              {canManage ? (
+                <>
+                  <button className="text-button" type="button" onClick={() => setFormModal({ mode: 'edit', item: student })}>Edit</button>
+                  <button className="text-button danger" type="button" onClick={() => setDeleteTarget(student)}>Nonaktifkan</button>
+                </>
+              ) : null}
             </>
-          ) : null}
+          )}
         </div>
       )
     }
@@ -243,7 +259,7 @@ export default function SiswaListPage() {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Nonaktifkan siswa?"
-        description={`Data ${deleteTarget?.namaLengkap || 'siswa'} tidak dihapus, hanya diubah menjadi nonaktif.`}
+        description={`Data ${deleteTarget?.namaLengkap || 'siswa'} akan dinonaktifkan (tidak dihapus permanen). Data nilai dan hafalan tetap tersimpan. Anda bisa mengaktifkan kembali dari filter "Nonaktif".`}
         confirmLabel="Nonaktifkan"
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDelete}

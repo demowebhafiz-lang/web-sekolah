@@ -11,11 +11,11 @@ import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { getGuruList } from '../guru/guruService.js';
 import MapelFormPage from './MapelFormPage.jsx';
-import { deleteMapel, getMapelList } from './mapelService.js';
+import { deleteMapel, getMapelList, updateMapel } from './mapelService.js';
 
 const initialFilters = {
   kelompok: '',
-  status: 'aktif',
+  status: '',
   keyword: ''
 };
 
@@ -91,6 +91,16 @@ export default function MapelListPage() {
     }
   }
 
+  async function handleRestore(mapel) {
+    try {
+      await updateMapel({ mapelId: mapel.mapelId, status: 'aktif' });
+      showToast({ title: 'Mapel diaktifkan', description: `${mapel.namaMapel} berhasil diaktifkan kembali.`, variant: 'success' });
+      await loadRows(filters);
+    } catch (err) {
+      showToast({ title: 'Gagal mengaktifkan mapel', description: err.message || 'Request gagal.', variant: 'error' });
+    }
+  }
+
   async function handleSaved(message) {
     setFormModal(null);
     showToast({ title: 'Mata pelajaran', description: message, variant: 'success' });
@@ -98,17 +108,23 @@ export default function MapelListPage() {
   }
 
   const columns = [
-    { key: 'namaMapel', header: 'Mata Pelajaran', render: (row) => <strong className="text-slate-950">{row.namaMapel || '-'}</strong> },
-    { key: 'guruId', header: 'Guru Pengampu', render: (row) => getGuruName(guruRows, row.guruId) },
-    { key: 'kelompok', header: 'Kategori', render: (row) => row.kelompok || '-' },
+    { key: 'namaMapel', header: 'Mata Pelajaran', render: (row) => <strong className={row.status === 'nonaktif' ? 'text-slate-400 line-through' : 'text-slate-950'}>{row.namaMapel || '-'}</strong> },
+    { key: 'guruId', header: 'Guru Pengampu', render: (row) => <span className={row.status === 'nonaktif' ? 'text-slate-400' : ''}>{getGuruName(guruRows, row.guruId)}</span> },
+    { key: 'kelompok', header: 'Kategori', render: (row) => <span className={row.status === 'nonaktif' ? 'text-slate-400' : ''}>{row.kelompok || '-'}</span> },
     { key: 'status', header: 'Status', render: (row) => <StatusBadge status={row.status || 'aktif'} /> },
     {
       key: 'aksi',
       header: 'Aksi',
       render: (row) => (
         <div className="flex gap-2">
-          <button className="text-button" type="button" onClick={() => setFormModal({ mode: 'edit', item: row })}>Edit</button>
-          <button className="text-button danger" type="button" onClick={() => setDeleteTarget(row)}>Nonaktifkan</button>
+          {row.status === 'nonaktif' ? (
+            <button className="text-button" type="button" onClick={() => handleRestore(row)}>Aktifkan</button>
+          ) : (
+            <>
+              <button className="text-button" type="button" onClick={() => setFormModal({ mode: 'edit', item: row })}>Edit</button>
+              <button className="text-button danger" type="button" onClick={() => setDeleteTarget(row)}>Nonaktifkan</button>
+            </>
+          )}
         </div>
       )
     }
@@ -149,7 +165,7 @@ export default function MapelListPage() {
         <DataTable columns={columns} rows={rows} keyField="mapelId" loading={isLoading} emptyTitle="Belum ada mata pelajaran" />
       </section>
 
-      <ConfirmDialog open={Boolean(deleteTarget)} title="Nonaktifkan mapel?" description={`${deleteTarget?.namaMapel || 'Mapel'} akan diubah menjadi nonaktif.`} confirmLabel="Nonaktifkan" onCancel={() => setDeleteTarget(null)} onConfirm={handleDelete} />
+      <ConfirmDialog open={Boolean(deleteTarget)} title="Nonaktifkan mapel?" description={`${deleteTarget?.namaMapel || 'Mapel'} akan dinonaktifkan (tidak dihapus permanen). Data terkait tetap tersimpan. Anda bisa mengaktifkan kembali dari filter "Nonaktif".`} confirmLabel="Nonaktifkan" onCancel={() => setDeleteTarget(null)} onConfirm={handleDelete} />
 
       <FormModal
         open={Boolean(formModal)}
